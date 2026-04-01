@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" viewBox="0 0 600.5 497.5" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Sol üst köşe: Elips/fan dairesi -->
+  <circle opacity="0.07" cx="135.5" cy="135.5" r="88.5" stroke="white" stroke-width="94" stroke-dasharray="4 4"/>
+  <!-- Sağ taraf: Turuncu zigzag çizgisi -->
+  <path d="M556 52L472.275 80.7804C465.228 83.2029 461.028 90.4318 462.413 97.754L464.596 109.293C465.977 116.595 461.804 123.807 454.785 126.249L423.455 137.146C412.35 141.009 409.804 155.565 418.939 162.968L506.023 233.536C510.832 237.433 512.753 243.883 510.861 249.776L481.491 341.241C479.938 346.08 480.94 351.376 484.153 355.313L599 496" stroke="#FF6B4A" stroke-width="3" stroke-linecap="round" stroke-dasharray="8 8"/>
+</svg>
