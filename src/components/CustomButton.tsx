@@ -2,7 +2,7 @@ import React from "react";
 import {
   ActivityIndicator,
   Text,
-  TouchableOpacity,
+  Pressable,
   TouchableOpacityProps,
   View,
 } from "react-native";
@@ -35,35 +35,35 @@ const containerBase =
   "flex-row items-center justify-center rounded-2xl overflow-hidden";
 
 const variantContainer: Record<ButtonVariant, string> = {
-  primary:   "bg-primary",
+  primary: "bg-primary",
   secondary: "bg-secondary",
-  outline:   "bg-transparent border-2 border-primary",
-  ghost:     "bg-transparent",
-  danger:    "bg-error",
+  outline: "bg-transparent border-2 border-primary",
+  ghost: "bg-transparent",
+  danger: "bg-error",
 };
 
 const variantContainerDisabled: Record<ButtonVariant, string> = {
-  primary:   "bg-primary/40",
+  primary: "bg-primary/40",
   secondary: "bg-secondary/40",
-  outline:   "bg-transparent border-2 border-neutral-300",
-  ghost:     "bg-transparent",
-  danger:    "bg-error/40",
+  outline: "bg-transparent border-2 border-neutral-300",
+  ghost: "bg-transparent",
+  danger: "bg-error/40",
 };
 
 const variantText: Record<ButtonVariant, string> = {
-  primary:   "text-white",
+  primary: "text-white",
   secondary: "text-white",
-  outline:   "text-primary",
-  ghost:     "text-primary",
-  danger:    "text-white",
+  outline: "text-primary",
+  ghost: "text-primary",
+  danger: "text-white",
 };
 
 const variantTextDisabled: Record<ButtonVariant, string> = {
-  primary:   "text-white/60",
+  primary: "text-white/60",
   secondary: "text-white/60",
-  outline:   "text-neutral-300",
-  ghost:     "text-neutral-300",
-  danger:    "text-white/60",
+  outline: "text-neutral-300",
+  ghost: "text-neutral-300",
+  danger: "text-white/60",
 };
 
 const sizeContainer: Record<ButtonSize, string> = {
@@ -124,7 +124,7 @@ export default function CustomButton({
   ].join(" ");
 
   return (
-    <TouchableOpacity
+    <Pressable
       activeOpacity={0.8}
       disabled={isDisabled}
       {...rest}
@@ -144,6 +144,6 @@ export default function CustomButton({
           {rightIcon && <View className="ml-1">{rightIcon}</View>}
         </>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }

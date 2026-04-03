@@ -1,6 +1,8 @@
 import React from "react";
 import { Text, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { colors } from "@/theme/color";
 
 export interface BackButtonProps {
   /** Varsayılan davranış: router.back() */
@@ -30,18 +32,12 @@ export default function BackButton({ onPress, light = true }: BackButtonProps) {
       onPress={onPress ?? (() => router.back())}
       activeOpacity={0.8}
       className={[
-        "w-[45px] h-[45px] rounded-full items-center justify-center",
+        "w-[45px] h-[45px] rounded-full items-center justify-center flex-row",
         light ? "bg-white" : "bg-neutral-100",
       ].join(" ")}
     >
-      <Text
-        className={[
-          "text-xl font-bold leading-none",
-          light ? "text-secondary-900" : "text-secondary-900",
-        ].join(" ")}
-      >
-        ‹
-      </Text>
+
+      <Ionicons name="chevron-back" size={22} color={colors.primary} />
     </TouchableOpacity>
   );
 }

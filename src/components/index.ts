@@ -6,3 +6,6 @@ export type { CustomInputProps } from "./CustomInput";
 
 export { default as BackButton } from "./BackButton";
 export type { BackButtonProps } from "./BackButton";
+
+export { SkeletonBox } from "./SkeletonBox";
+export type { SkeletonBoxProps } from "./SkeletonBox";

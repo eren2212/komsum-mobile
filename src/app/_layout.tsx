@@ -1,10 +1,13 @@
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../../global.css";
 
 import { useAuthStore } from "@/store/authStore";
 import { setupInterceptors } from "@/api/interceptors";
+
+const queryClient = new QueryClient();
 
 // Interceptor'lar uygulama başladığında bir kez kurulur
 setupInterceptors();
@@ -46,5 +49,9 @@ export default function RootLayout() {
     );
   }
 
-  return <Slot />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Slot />
+    </QueryClientProvider>
+  );
 }
