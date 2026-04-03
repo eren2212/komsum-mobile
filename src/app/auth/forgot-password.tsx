@@ -13,6 +13,7 @@ import { create } from "zustand";
 import { BackButton, CustomButton, CustomInput } from "@/components";
 import { useAuthStore } from "@/store/authStore";
 import BgAsset from "../../../assets/images/signup-bg-asset.svg";
+import Feather from '@expo/vector-icons/Feather';
 
 // ─── Local form state (Zustand) ───────────────────────────────────────────────
 
@@ -121,9 +122,10 @@ export default function ForgotPasswordScreen() {
           />
 
           {/* Bilgi notu */}
-          <View className="mt-4 bg-primary/10 rounded-2xl px-4 py-3">
+          <View className="mt-4 bg-primary/10 rounded-2xl px-4 py-3 flex-row items-center gap-2">
+            <Feather name="mail" size={24} color="gray" />
             <Text className="text-primary text-sm leading-5">
-              📧 Kayıtlı e-posta adresine 6 haneli bir doğrulama kodu
+              Kayıtlı e-posta adresine 6 haneli bir doğrulama kodu
               göndereceğiz. Kodun geçerlilik süresi 3 dakikadır.
             </Text>
           </View>
