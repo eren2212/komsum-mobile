@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { Alert, Image, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Image, StatusBar, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -27,13 +27,16 @@ interface MenuItemConfig {
 function ProfileSkeleton() {
   return (
     <SafeAreaView className="flex-1 bg-secondary" edges={["top"]}>
+      <StatusBar
+        backgroundColor="#6200EE" // Sadece Android: Arka plan rengini değiştirir
+        barStyle="light-content"  // iOS ve Android: İkonların ve yazıların rengi
+        animated={true}           // Renk değişirken yumuşak bir animasyon yapar
+      />
       {/* Dark header skeleton */}
       <View className="px-6 pt-4 pb-9">
         {/* Nav row */}
-        <View className="flex-row items-center justify-between mb-7">
-          <SkeletonBox width={45} height={45} borderRadius={22} isDark />
+        <View className="flex-row items-center justify-center mb-7">
           <SkeletonBox width={80} height={22} borderRadius={11} isDark />
-          <SkeletonBox width={45} height={45} borderRadius={22} isDark />
         </View>
 
         {/* Avatar + name */}
@@ -70,15 +73,7 @@ function MenuItem({ item, isLast }: { item: MenuItemConfig; isLast: boolean }) {
         className="flex-row items-center py-4"
       >
         <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            backgroundColor: "#FFF1EE",
-            alignItems: "center",
-            justifyContent: "center",
-            marginRight: 16,
-          }}
+          className="w-[44px] h-[44px] rounded-lg bg-primary/20 items-center justify-center mr-4"
         >
           <Ionicons name={item.icon} size={20} color={colors.primary.DEFAULT} />
         </View>
@@ -139,6 +134,11 @@ export default function ProfileScreen() {
   if (error) {
     return (
       <SafeAreaView className="flex-1 bg-secondary" edges={["top"]}>
+        <StatusBar
+          backgroundColor="#6200EE" // Sadece Android: Arka plan rengini değiştirir
+          barStyle="light-content"  // iOS ve Android: İkonların ve yazıların rengi
+          animated={true}           // Renk değişirken yumuşak bir animasyon yapar
+        />
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-error text-center mb-2">
             Profil yüklenirken bir hata oluştu.
@@ -163,9 +163,9 @@ export default function ProfileScreen() {
       onPress: () => router.push("/profile/profile-edit"),
     },
     {
-      icon: "heart-outline",
-      label: "Favorilerim",
-      onPress: () => { },
+      icon: "chatbubble-outline",
+      label: "Postlarım",
+      onPress: () => router.push("/profile/my-posts"),
     },
     {
       icon: "notifications-outline",
@@ -173,10 +173,15 @@ export default function ProfileScreen() {
       onPress: () => { },
     },
     {
-      icon: "card-outline",
-      label: "Ödeme Yöntemleri",
-      onPress: () => { },
+      icon: "list-outline",
+      label: "İlanlarım",
+      onPress: () => router.push("/profile/my-listings"),
     },
+    // {
+    //   icon: "card-outline",
+    //   label: "Ödeme Yöntemleri",
+    //   onPress: () => { },
+    // },
     {
       icon: "log-out-outline",
       label: "Çıkış Yap",
@@ -187,27 +192,18 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-secondary" edges={["top"]}>
+      <StatusBar
+        backgroundColor="#6200EE" // Sadece Android: Arka plan rengini değiştirir
+        barStyle="light-content"  // iOS ve Android: İkonların ve yazıların rengi
+        animated={true}           // Renk değişirken yumuşak bir animasyon yapar
+      />
       {/* ── Dark header ── */}
       <View className="px-6 pt-4 pb-9">
         {/* Nav row */}
-        <View className="flex-row items-center justify-between mb-7">
-          <BackButton light={false} />
+        <View className="flex-row items-center justify-center mb-7">
 
-          <Text className="text-white text-lg font-bold">Profilim</Text>
+          <Text className="text-white text-lg font-bold text-center">Profilim</Text>
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={{
-              width: 45,
-              height: 45,
-              borderRadius: 22,
-              backgroundColor: "rgba(255,255,255,0.12)",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons name="settings-outline" size={22} color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
 
         {/* Avatar + name */}
@@ -216,48 +212,16 @@ export default function ProfileScreen() {
             {profile.avatarUrl ? (
               <Image
                 source={{ uri: profile.avatarUrl }}
-                style={{
-                  width: 96,
-                  height: 96,
-                  borderRadius: 48,
-                  borderWidth: 3,
-                  borderColor: "rgba(255,255,255,0.2)",
-                }}
+                className="w-[96px] h-[96px] rounded-full border-3 border-white/20"
               />
             ) : (
               <View
-                style={{
-                  width: 96,
-                  height: 96,
-                  borderRadius: 48,
-                  backgroundColor: "rgba(255,107,74,0.2)",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderWidth: 3,
-                  borderColor: "rgba(255,107,74,0.3)",
-                }}
+                className="w-[96px] h-[96px] rounded-full border-3 border-white/20 bg-primary/20 items-center justify-center"
               >
                 <Text className="text-primary text-4xl font-bold">{initials}</Text>
               </View>
             )}
 
-            {/* Edit button */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={{
-                position: "absolute",
-                bottom: 0,
-                right: 0,
-                width: 30,
-                height: 30,
-                borderRadius: 15,
-                backgroundColor: colors.primary.DEFAULT,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons name="pencil" size={14} color="#FFFFFF" />
-            </TouchableOpacity>
           </View>
 
           <Text className="text-white text-xl font-bold">{fullName}</Text>

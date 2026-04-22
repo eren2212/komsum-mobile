@@ -73,10 +73,10 @@ export default function ProfilePasswordScreen() {
   const serverError = error ? (error as Error).message : "";
   const displayError = clientError || serverError;
 
-  const isChanged = newPassword.trim() !== "" &&
+  const isChanged =
+    newPassword.trim() !== "" &&
     confirmNewPassword.trim() !== "" &&
     newPassword !== oldPassword;
-  newPassword !== confirmNewPassword;
 
   return (
     <SafeAreaView className="flex-1 bg-secondary" edges={["top"]}>
@@ -92,45 +92,23 @@ export default function ProfilePasswordScreen() {
             <TouchableOpacity
               onPress={() => router.back()}
               activeOpacity={0.8}
-              style={{
-                width: 45,
-                height: 45,
-                borderRadius: 22,
-                backgroundColor: "rgba(255,255,255,0.12)",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              className="w-[45px] h-[45px] rounded-[22px] bg-[rgba(255,255,255,0.12)] items-center justify-center"
             >
               <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
             </TouchableOpacity>
 
             <Text className="text-white text-[17px] font-bold">Şifre Değiştir</Text>
 
-            <View style={{ width: 45 }} />
+            <View className="w-[45px]" />
           </View>
 
           {/* Ikon */}
           <View className="items-center mb-5">
             {/* Dış parlak halka */}
-            <View
-              style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                backgroundColor: "rgba(255,107,74,0.2)",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
+            <View className="w-[80px] h-[80px] rounded-[40px] bg-[rgba(255,107,74,0.2)] items-center justify-center">
               <View
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 32,
-                  backgroundColor: colors.primary.DEFAULT,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+                className="w-[64px] h-[64px] rounded-[32px] items-center justify-center"
+                style={{ backgroundColor: colors.primary.DEFAULT }}
               >
                 <Ionicons name="lock-open" size={28} color="#FFFFFF" />
               </View>
@@ -138,21 +116,15 @@ export default function ProfilePasswordScreen() {
           </View>
 
           {/* Açıklama */}
-          <Text
-            className="text-white/80 text-center text-sm leading-5"
-            style={{ paddingHorizontal: 24 }}
-          >
+          <Text className="text-white/80 text-center text-sm leading-5 px-6">
             Hesabınızı güvende tutmak için güçlü bir şifre belirleyin.
           </Text>
         </View>
 
         {/* ── Beyaz kart ── */}
-        <View
-          className="flex-1 bg-white"
-          style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32 }}
-        >
+        <View className="flex-1 bg-white rounded-t-[32px]">
           <ScrollView
-            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 28, paddingBottom: 16 }}
+            contentContainerClassName="px-5 pt-[28px] pb-4"
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -192,13 +164,12 @@ export default function ProfilePasswordScreen() {
                   >
                     ŞİFRE GÜCÜ: {strength.label}
                   </Text>
-                  <View className="h-1 bg-neutral-100 rounded-full overflow-hidden">
+                  <View className="h-[4px] bg-neutral-100 rounded-full overflow-hidden">
                     <View
+                      className="h-[4px] rounded-[2px]"
                       style={{
-                        height: 4,
                         width: `${strength.ratio * 100}%`,
                         backgroundColor: strength.color,
-                        borderRadius: 2,
                       }}
                     />
                   </View>
@@ -222,7 +193,7 @@ export default function ProfilePasswordScreen() {
 
             {/* Hata */}
             {displayError ? (
-              <Text className="text-error text-xs mt-1 ml-1">{displayError}</Text>
+              <Text className="text-red-500 text-xs mt-1 ml-1">{displayError}</Text>
             ) : null}
           </ScrollView>
 

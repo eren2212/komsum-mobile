@@ -7,11 +7,12 @@ export default function TabsLayout() {
         <Tabs
             screenOptions={{
                 headerShown: false,
-                tabBarShowLabel: true, // Yazıları gösterir, kapatmak istersen false yap
-                tabBarActiveTintColor: '#FF6B4A', // Aktif sekme rengi (Canlı Turuncu)
-                tabBarInactiveTintColor: '#8E8E93', // Pasif sekme rengi (Yumuşak Gri)
+                tabBarShowLabel: true,
+                tabBarActiveTintColor: '#FF6B4A',
+                tabBarInactiveTintColor: '#8E8E93',
                 tabBarStyle: styles.tabBar,
                 tabBarLabelStyle: styles.tabBarLabel,
+                animation: 'fade',
             }}
         >
             <Tabs.Screen
