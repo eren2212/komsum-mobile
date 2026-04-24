@@ -340,7 +340,7 @@ function EsnafProfile({
                     </Text>
                     <View className="mb-2 px-2">
                         <ManageRow icon="create-outline" label="Bilgileri Düzenle" onPress={() => router.push("/merchant/edit")} />
-                        <ManageRow icon="images-outline" label="Gönderilerim" onPress={() => { }} />
+                        <ManageRow icon="images-outline" label="Postlarım" onPress={() => router.push("/merchant/my-sponsored-posts")} />
                         <ManageRow icon="bar-chart-outline" label="İstatistikler" badge="Yakında" disabled />
                         <ManageRow icon="card-outline" label="Ödeme ve Abonelik" badge="Yakında" disabled isLast />
                     </View>

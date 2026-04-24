@@ -119,7 +119,7 @@ interface PostCardProps {
 }
 
 function PostCard({ post }: PostCardProps) {
-  const { isLiked, likeCount, toggle } = useLike(post.id);
+  const { isLiked, likeCount, toggle } = useLike(post.id, post.likedByMe, post.likeCount);
   const router = useRouter();
   const isSponsored = post.type === "SPONSORED";
   const isHelp = post.type === "HELP_REQUEST";
@@ -228,7 +228,7 @@ function PostCard({ post }: PostCardProps) {
               >
                 <Ionicons name="chatbubble-outline" size={16} color="#A0A5BA" />
                 <Text className="text-[12px] font-semibold text-neutral-300">
-                  Yorum
+                  {post.commentCount > 0 ? post.commentCount : "Yorum"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -300,10 +300,11 @@ function PostCard({ post }: PostCardProps) {
             <TouchableOpacity
               activeOpacity={0.7}
               className="flex-row items-center gap-[5px]"
+              onPress={navigateToDetail}
             >
               <Ionicons name="chatbubble-outline" size={16} color="#A0A5BA" />
               <Text className="text-[12px] font-semibold text-neutral-300">
-                Yorum
+                {post.commentCount > 0 ? post.commentCount : "Yorum"}
               </Text>
             </TouchableOpacity>
           </View>

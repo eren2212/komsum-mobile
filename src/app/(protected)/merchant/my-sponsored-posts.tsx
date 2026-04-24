@@ -21,13 +21,13 @@ import {
 } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-import { postApi, DtoPost, PostType } from "@/api/post";
+import { postApi, DtoPost } from "@/api/post";
 import { colors } from "@/theme/color";
 import { BackButton, SkeletonBox } from "@/components";
 import { router } from "expo-router";
 
 const SCREEN_W = Dimensions.get("window").width;
-const CARD_INNER_W = SCREEN_W - 40 - 32; // 20px padding * 2 + 16px card padding * 2
+const CARD_INNER_W = SCREEN_W - 40 - 32;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -47,33 +47,6 @@ function formatDate(iso: string): string {
   });
 }
 
-// ─── Post type config ─────────────────────────────────────────────────────────
-
-const TYPE_CONFIG: Record<
-  PostType,
-  { label: string; bg: string; text: string; icon: string }
-> = {
-  STANDARD: {
-    label: "Normal",
-    bg: "#F5F6FA",
-    text: "#646982",
-    icon: "chatbubble-outline",
-  },
-  HELP_REQUEST: {
-    label: "Yardım",
-    bg: "#FEF3C7",
-    text: "#B45309",
-    icon: "hand-right-outline",
-  },
-  SPONSORED: {
-    label: "Esnaf",
-    bg: "#FFF1EE",
-    text: colors.primary.DEFAULT,
-    icon: "storefront-outline",
-  },
-};
-
-// Ortak Gölge Stili
 const cardShadow = Platform.select({
   ios: { shadowColor: "#121223", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   android: { elevation: 2 },
@@ -91,18 +64,8 @@ function PostCardSkeleton() {
         <SkeletonBox width={70} height={26} borderRadius={13} />
         <SkeletonBox width={64} height={14} borderRadius={7} />
       </View>
-      <SkeletonBox
-        width={CARD_INNER_W}
-        height={16}
-        borderRadius={8}
-        style={{ marginBottom: 8 }}
-      />
-      <SkeletonBox
-        width={CARD_INNER_W * 0.75}
-        height={16}
-        borderRadius={8}
-        style={{ marginBottom: 18 }}
-      />
+      <SkeletonBox width={CARD_INNER_W} height={16} borderRadius={8} style={{ marginBottom: 8 }} />
+      <SkeletonBox width={CARD_INNER_W * 0.75} height={16} borderRadius={8} style={{ marginBottom: 18 }} />
       <View className="flex-row justify-between items-center">
         <SkeletonBox width={110} height={14} borderRadius={7} />
         <SkeletonBox width={68} height={30} borderRadius={15} />
@@ -121,12 +84,10 @@ interface PostCardProps {
 }
 
 function PostCard({ post, onDelete, onEdit, isDeleting }: PostCardProps) {
-  const cfg = TYPE_CONFIG[post.type] ?? TYPE_CONFIG.STANDARD;
-
   const handleDelete = () => {
     Alert.alert(
       "Gönderiyi Sil",
-      "Bu gönderiyi kalıcı olarak silmek istediğinize emin misiniz?",
+      "Bu sponsorlu gönderiyi kalıcı olarak silmek istediğinize emin misiniz?",
       [
         { text: "İptal", style: "cancel" },
         { text: "Sil", style: "destructive", onPress: () => onDelete(post.id) },
@@ -151,37 +112,28 @@ function PostCard({ post, onDelete, onEdit, isDeleting }: PostCardProps) {
         <View className="flex-row items-center justify-between mb-2.5">
           <View
             className="flex-row items-center px-2.5 py-1.5 rounded-xl gap-1"
-            style={{ backgroundColor: cfg.bg }}
+            style={{ backgroundColor: "#FFF1EE" }}
           >
-            <Ionicons name={cfg.icon as any} size={12} color={cfg.text} />
-            <Text className="text-xs font-semibold" style={{ color: cfg.text }}>
-              {cfg.label}
+            <Ionicons name="storefront-outline" size={12} color={colors.primary.DEFAULT} />
+            <Text className="text-xs font-semibold" style={{ color: colors.primary.DEFAULT }}>
+              Esnaf
             </Text>
           </View>
-
-          <Text className="text-xs text-[#A0A5BA]">
-            {formatDate(post.createdAt)}
-          </Text>
+          <Text className="text-xs text-[#A0A5BA]">{formatDate(post.createdAt)}</Text>
         </View>
 
-        {/* ── Shop name (SPONSORED only) ── */}
-        {post.type === "SPONSORED" && post.shopName ? (
+        {/* ── Shop name ── */}
+        {post.shopName ? (
           <View className="flex-row items-center gap-1 mb-2">
             <Ionicons name="storefront" size={13} color={colors.primary.DEFAULT} />
-            <Text
-              className="text-xs font-semibold"
-              style={{ color: colors.primary.DEFAULT }}
-            >
+            <Text className="text-xs font-semibold" style={{ color: colors.primary.DEFAULT }}>
               {post.shopName}
             </Text>
           </View>
         ) : null}
 
         {/* ── Content ── */}
-        <Text
-          numberOfLines={5}
-          className="text-[15px] text-[#32343E] leading-[22px] mb-3.5"
-        >
+        <Text numberOfLines={5} className="text-[15px] text-[#32343E] leading-[22px] mb-3.5">
           {post.content}
         </Text>
 
@@ -189,9 +141,7 @@ function PostCard({ post, onDelete, onEdit, isDeleting }: PostCardProps) {
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-1">
             <Ionicons name="location-outline" size={13} color="#A0A5BA" />
-            <Text className="text-xs text-[#A0A5BA]">
-              {post.neighborhoodName}
-            </Text>
+            <Text className="text-xs text-[#A0A5BA]">{post.neighborhoodName}</Text>
           </View>
 
           <View className="flex-row items-center gap-2">
@@ -265,7 +215,6 @@ function EditModal({ post, onClose, onSave, isSaving }: EditModalProps) {
         >
           <Pressable onPress={(e) => e.stopPropagation()}>
             <View className="bg-white rounded-[24px] p-5" style={cardShadow}>
-              {/* ── Header ── */}
               <View className="flex-row items-center justify-between mb-4">
                 <Text className="text-[16px] font-bold text-[#32343E]">
                   Gönderiyi Düzenle
@@ -275,7 +224,6 @@ function EditModal({ post, onClose, onSave, isSaving }: EditModalProps) {
                 </TouchableOpacity>
               </View>
 
-              {/* ── Input ── */}
               <TextInput
                 value={text}
                 onChangeText={setText}
@@ -292,16 +240,13 @@ function EditModal({ post, onClose, onSave, isSaving }: EditModalProps) {
                 {text.length}/500
               </Text>
 
-              {/* ── Buttons ── */}
               <View className="flex-row gap-3">
                 <TouchableOpacity
                   onPress={onClose}
                   activeOpacity={0.7}
                   className="flex-1 py-3 rounded-[14px] bg-slate-100 items-center"
                 >
-                  <Text className="text-sm font-semibold text-[#646982]">
-                    İptal
-                  </Text>
+                  <Text className="text-sm font-semibold text-[#646982]">İptal</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -309,17 +254,12 @@ function EditModal({ post, onClose, onSave, isSaving }: EditModalProps) {
                   disabled={isSaving}
                   activeOpacity={0.7}
                   className="flex-1 py-3 rounded-[14px] items-center"
-                  style={{
-                    backgroundColor: colors.primary.DEFAULT,
-                    opacity: isSaving ? 0.6 : 1,
-                  }}
+                  style={{ backgroundColor: colors.primary.DEFAULT, opacity: isSaving ? 0.6 : 1 }}
                 >
                   {isSaving ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text className="text-sm font-semibold text-white">
-                      Kaydet
-                    </Text>
+                    <Text className="text-sm font-semibold text-white">Kaydet</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -337,17 +277,13 @@ function EmptyState() {
   return (
     <View className="flex-1 items-center justify-center pt-20 px-8">
       <View className="w-[88px] h-[88px] rounded-full bg-[#FFF1EE] items-center justify-center mb-5">
-        <Ionicons
-          name="chatbubbles-outline"
-          size={38}
-          color={colors.primary.DEFAULT}
-        />
+        <Ionicons name="storefront-outline" size={38} color={colors.primary.DEFAULT} />
       </View>
       <Text className="text-lg font-bold text-[#32343E] mb-2.5 text-center">
-        Henüz Gönderi Yok
+        Henüz Sponsorlu Gönderi Yok
       </Text>
       <Text className="text-sm text-[#A0A5BA] text-center leading-relaxed">
-        Mahallenle bir şeyler paylaştığında gönderilerin burada görünecek.
+        İşletmen adına mahalleye duyuru yaptığında gönderiler burada görünecek.
       </Text>
     </View>
   );
@@ -355,7 +291,7 @@ function EmptyState() {
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-export default function MyPostsScreen() {
+export default function MySponsoredPostsScreen() {
   const queryClient = useQueryClient();
   const [editingPost, setEditingPost] = useState<DtoPost | null>(null);
 
@@ -367,8 +303,8 @@ export default function MyPostsScreen() {
     fetchNextPage,
     error,
   } = useInfiniteQuery({
-    queryKey: ["my-posts"],
-    queryFn: ({ pageParam }) => postApi.getMyPosts(pageParam as number, 10),
+    queryKey: ["my-sponsored-posts"],
+    queryFn: ({ pageParam }) => postApi.getMySponsoredPosts(pageParam as number, 10),
     initialPageParam: 0,
     getNextPageParam: (lastPage) =>
       lastPage.last ? undefined : lastPage.number + 1,
@@ -381,7 +317,7 @@ export default function MyPostsScreen() {
   } = useMutation({
     mutationFn: postApi.deletePost,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["my-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["my-sponsored-posts"] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
     onError: () => {
@@ -394,7 +330,7 @@ export default function MyPostsScreen() {
       postApi.updatePost(postId, { content }),
     onSuccess: () => {
       setEditingPost(null);
-      queryClient.invalidateQueries({ queryKey: ["my-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["my-sponsored-posts"] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
     onError: () => {
@@ -415,11 +351,8 @@ export default function MyPostsScreen() {
       <View className="flex-row items-center justify-between px-5 pt-3 pb-4">
         <BackButton light={false} />
 
-        <Text className="text-[17px] font-bold text-[#32343E]">
-          Postlarım
-        </Text>
+        <Text className="text-[17px] font-bold text-[#32343E]">Gönderilerim</Text>
 
-        {/* Post count badge */}
         {!isLoading ? (
           <View className="px-3 py-1.5 rounded-full bg-[#FFF1EE] min-w-[36px] items-center">
             <Text

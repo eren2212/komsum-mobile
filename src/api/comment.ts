@@ -18,12 +18,17 @@ function unwrap<T>(entity: RootEntity<T>): T {
 export interface DtoComment {
   id: number;
   content: string;
+  authorId: number;
   authorFirstName: string;
   authorLastName: string;
   createdAt: string;
 }
 
 export interface DtoCreateComment {
+  content: string;
+}
+
+export interface DtoUpdateComment {
   content: string;
 }
 
@@ -62,6 +67,15 @@ export const commentApi = {
         `/api/posts/${postId}/comments`,
         payload
       )
+      .then((res) => unwrap(res.data)),
+
+  /** PUT /api/comments/{commentId} – Yorumu güncelle */
+  updateComment: (
+    commentId: number,
+    payload: DtoUpdateComment
+  ): Promise<DtoComment> =>
+    apiClient
+      .put<RootEntity<DtoComment>>(`/api/comments/${commentId}`, payload)
       .then((res) => unwrap(res.data)),
 
   /** DELETE /api/comments/{commentId} – Yorumu sil */

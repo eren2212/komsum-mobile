@@ -24,6 +24,10 @@ export interface DtoCreatePost {
   type: PostType;
 }
 
+export interface DtoUpdatePost {
+  content: string;
+}
+
 export interface DtoPost {
   id: number;
   content: string;
@@ -34,7 +38,16 @@ export interface DtoPost {
   authorLastName: string;
   authorKarmaScore?: number | null;
   neighborhoodName: string;
+  likeCount: number;
+  commentCount: number;
+  likedByMe: boolean;
   createdAt: string;
+}
+
+export interface DtoToggleLike {
+  /** Jackson: boolean isLiked getter → "liked" JSON key */
+  liked: boolean;
+  newLikeCount: number;
 }
 
 interface PageResponse<T> {
@@ -63,10 +76,18 @@ export const postApi = {
       })
       .then((res) => unwrap(res.data)),
 
-  /** GET /api/posts/my-posts – Kendi gönderilerim */
+  /** GET /api/posts/my-posts – Kendi standart gönderilerim */
   getMyPosts: (pageNo = 0, pageSize = 10): Promise<PageResponse<DtoPost>> =>
     apiClient
       .get<RootEntity<PageResponse<DtoPost>>>("/api/posts/my-posts", {
+        params: { pageNo, pageSize },
+      })
+      .then((res) => unwrap(res.data)),
+
+  /** GET /api/posts/my-sponsored-posts – Esnaf olarak kendi sponsorlu gönderilerim */
+  getMySponsoredPosts: (pageNo = 0, pageSize = 10): Promise<PageResponse<DtoPost>> =>
+    apiClient
+      .get<RootEntity<PageResponse<DtoPost>>>("/api/posts/my-sponsored-posts", {
         params: { pageNo, pageSize },
       })
       .then((res) => unwrap(res.data)),
@@ -77,9 +98,15 @@ export const postApi = {
       .post<RootEntity<boolean>>(`/api/posts/delete/${postId}`)
       .then((res) => unwrap(res.data)),
 
-  /** POST /api/posts/{id}/like – Beğen / beğeniyi geri al */
-  toggleLike: (postId: number): Promise<string> =>
+  /** PUT /api/posts/update/{id} – Gönderi metnini güncelle */
+  updatePost: (postId: number, payload: DtoUpdatePost): Promise<boolean> =>
     apiClient
-      .post<RootEntity<string>>(`/api/posts/${postId}/like`)
+      .put<RootEntity<boolean>>(`/api/posts/update/${postId}`, payload)
+      .then((res) => unwrap(res.data)),
+
+  /** POST /api/posts/{id}/like – Beğen / beğeniyi geri al */
+  toggleLike: (postId: number): Promise<DtoToggleLike> =>
+    apiClient
+      .post<RootEntity<DtoToggleLike>>(`/api/posts/${postId}/like`)
       .then((res) => unwrap(res.data)),
 };

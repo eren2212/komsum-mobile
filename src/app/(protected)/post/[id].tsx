@@ -1,10 +1,12 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   Text,
@@ -17,12 +19,14 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { commentApi, DtoComment } from "@/api/comment";
 import { DtoPost } from "@/api/post";
+import { userApi } from "@/api/user";
 import { colors } from "@/theme/color";
 import { useLike } from "@/hooks/useLike";
 import { SkeletonBox } from "@/components";
@@ -117,11 +121,13 @@ function CommentSkeleton() {
 
 interface CommentItemProps {
   comment: DtoComment;
-  onDelete?: (id: number) => void;
+  isOwner: boolean;
+  onDelete: (id: number) => void;
+  onEdit: (comment: DtoComment) => void;
   isDeletingId: number | null;
 }
 
-function CommentItem({ comment, onDelete, isDeletingId }: CommentItemProps) {
+function CommentItem({ comment, isOwner, onDelete, onEdit, isDeletingId }: CommentItemProps) {
   const isDeleting = isDeletingId === comment.id;
 
   return (
@@ -138,7 +144,7 @@ function CommentItem({ comment, onDelete, isDeletingId }: CommentItemProps) {
 
       {/* Bubble */}
       <View className="flex-1 bg-[#f8fafc] rounded-tr-[16px] rounded-bl-[16px] rounded-br-[16px] p-3">
-        {/* Name + time + delete */}
+        {/* Name + time + actions */}
         <View className="flex-row items-center justify-between mb-1">
           <Text className="text-[14px] font-bold text-[#121223]">
             {comment.authorFirstName} {comment.authorLastName.charAt(0)}.
@@ -147,14 +153,23 @@ function CommentItem({ comment, onDelete, isDeletingId }: CommentItemProps) {
             <Text className="text-[10px] text-[#94a3b8]">
               {formatDate(comment.createdAt)}
             </Text>
-            {onDelete && (
-              <TouchableOpacity
-                onPress={() => onDelete(comment.id)}
-                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                disabled={isDeleting}
-              >
-                <Ionicons name="trash-outline" size={12} color="#CBD5E1" />
-              </TouchableOpacity>
+            {isOwner && (
+              <>
+                <TouchableOpacity
+                  onPress={() => onEdit(comment)}
+                  hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                  disabled={isDeleting}
+                >
+                  <Ionicons name="pencil-outline" size={12} color="#94a3b8" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => onDelete(comment.id)}
+                  hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                  disabled={isDeleting}
+                >
+                  <Ionicons name="trash-outline" size={12} color="#CBD5E1" />
+                </TouchableOpacity>
+              </>
             )}
           </View>
         </View>
@@ -168,6 +183,114 @@ function CommentItem({ comment, onDelete, isDeletingId }: CommentItemProps) {
   );
 }
 
+// ─── CommentEditModal ─────────────────────────────────────────────────────────
+
+interface CommentEditModalProps {
+  comment: DtoComment | null;
+  onClose: () => void;
+  onSave: (commentId: number, content: string) => void;
+  isSaving: boolean;
+}
+
+function CommentEditModal({ comment, onClose, onSave, isSaving }: CommentEditModalProps) {
+  const [text, setText] = useState(comment?.content ?? "");
+
+  useEffect(() => {
+    if (comment) setText(comment.content);
+  }, [comment?.id]);
+
+  const handleSave = () => {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      Alert.alert("Uyarı", "Yorum boş olamaz.");
+      return;
+    }
+    if (comment?.id != null) {
+      onSave(comment.id, trimmed);
+    }
+  };
+
+  const cardShadow = Platform.select({
+    ios: { shadowColor: "#121223", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12 },
+    android: { elevation: 4 },
+  });
+
+  return (
+    <Modal
+      visible={comment !== null}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
+      >
+        <Pressable
+          className="flex-1 bg-black/40 justify-center px-5"
+          onPress={onClose}
+        >
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <View className="bg-white rounded-[20px] p-5" style={cardShadow}>
+              {/* Header */}
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-[15px] font-bold text-[#121223]">
+                  Yorumu Düzenle
+                </Text>
+                <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
+                  <Ionicons name="close" size={20} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Input */}
+              <TextInput
+                value={text}
+                onChangeText={setText}
+                multiline
+                maxLength={300}
+                placeholder="Yorumunu yaz..."
+                placeholderTextColor="#94a3b8"
+                className="bg-[#f8fafc] rounded-[12px] p-3 text-[14px] text-[#334155] leading-[20px]"
+                style={{ minHeight: 90, textAlignVertical: "top" }}
+                autoFocus
+              />
+
+              <Text className="text-[11px] text-[#94a3b8] text-right mt-1 mb-4">
+                {text.length}/300
+              </Text>
+
+              {/* Buttons */}
+              <View className="flex-row gap-3">
+                <TouchableOpacity
+                  onPress={onClose}
+                  activeOpacity={0.7}
+                  className="flex-1 py-2.5 rounded-[12px] bg-slate-100 items-center"
+                >
+                  <Text className="text-sm font-semibold text-[#64748b]">İptal</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleSave}
+                  disabled={isSaving}
+                  activeOpacity={0.7}
+                  className="flex-1 py-2.5 rounded-[12px] items-center"
+                  style={{ backgroundColor: colors.primary.DEFAULT, opacity: isSaving ? 0.6 : 1 }}
+                >
+                  {isSaving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text className="text-sm font-semibold text-white">Kaydet</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 // ─── Post Detail Screen ───────────────────────────────────────────────────────
 
 export default function PostDetailScreen() {
@@ -175,15 +298,24 @@ export default function PostDetailScreen() {
   const queryClient = useQueryClient();
   const { postJson } = useLocalSearchParams<{ postJson: string }>();
 
-  const post: DtoPost = JSON.parse(postJson ?? "{}");
-  const { isLiked, likeCount, toggle } = useLike(post.id);
+  const post: DtoPost = JSON.parse(decodeURIComponent(postJson ?? "{}"));
+  const { isLiked, likeCount, toggle } = useLike(post.id, post.likedByMe, post.likeCount);
 
   const isSponsored = post.type === "SPONSORED";
   const isHelp = post.type === "HELP_REQUEST";
 
+  // ── Giriş yapan kullanıcının ID'si
+  const { data: myProfile } = useQuery({
+    queryKey: ["me", "profile"],
+    queryFn: userApi.getMyProfile,
+    staleTime: Infinity,
+  });
+  const currentUserId = myProfile?.id;
+
   // ── Yorum state
   const [commentText, setCommentText] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [editingComment, setEditingComment] = useState<DtoComment | null>(null);
   const inputRef = useRef<TextInput>(null);
 
   // ── Yorumları infinite yükle
@@ -250,6 +382,30 @@ export default function PostDetailScreen() {
     onError: () => setDeletingId(null),
   });
 
+  // ── Yorum güncelle mutation
+  const { mutate: updateComment, isPending: isUpdatingComment } = useMutation({
+    mutationFn: ({ commentId, content }: { commentId: number; content: string }) =>
+      commentApi.updateComment(commentId, { content }),
+    onSuccess: (updatedComment) => {
+      setEditingComment(null);
+      queryClient.setQueryData(["postComments", post.id], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            content: page.content.map((c: DtoComment) =>
+              c.id === updatedComment.id ? updatedComment : c
+            ),
+          })),
+        };
+      });
+    },
+    onError: () => {
+      Alert.alert("Hata", "Yorum güncellenirken bir sorun oluştu, tekrar dene.");
+    },
+  });
+
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
@@ -266,8 +422,8 @@ export default function PostDetailScreen() {
   const avatarBg = isSponsored
     ? colors.primary.DEFAULT
     : isHelp
-    ? "#FEF3C7"
-    : "#121223";
+      ? "#FEF3C7"
+      : "#121223";
 
   // ── FlatList ListHeaderComponent: post içeriği
   const PostHeader = (
@@ -389,12 +545,14 @@ export default function PostDetailScreen() {
       <View className="px-4">
         <CommentItem
           comment={item}
+          isOwner={currentUserId === item.authorId}
           onDelete={(id) => deleteComment(id)}
+          onEdit={(c) => setEditingComment(c)}
           isDeletingId={deletingId}
         />
       </View>
     ),
-    [deletingId, deleteComment]
+    [deletingId, currentUserId, deleteComment]
   );
 
   const ListFooter = (
@@ -471,6 +629,13 @@ export default function PostDetailScreen() {
           onEndReachedThreshold={0.4}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+        />
+
+        <CommentEditModal
+          comment={editingComment}
+          onClose={() => setEditingComment(null)}
+          onSave={(commentId, content) => updateComment({ commentId, content })}
+          isSaving={isUpdatingComment}
         />
 
         {/* ── Sticky Bottom: Yorum giriş alanı ── */}

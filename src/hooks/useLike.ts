@@ -5,82 +5,96 @@ import { postApi } from "@/api/post";
 // ─── Tip ──────────────────────────────────────────────────────────────────────
 
 interface LikeState {
-  isLiked:   boolean;
+  isLiked: boolean;
   likeCount: number;
 }
 
 // ─── Modül-düzeyinde paylaşılan yapılar ───────────────────────────────────────
 //
-// Neden modül-düzeyi?
-//   React Query cache sadece "gösterim" state'ini tutar.
-//   "committed" (backend'e ulaşan) state ve debounce timer'ları
-//   aynı postId için birden fazla component instance'ı olsa bile
-//   TEK bir yerden yönetilmesi gerekir.
-//   → Feed'de beğenip detay sayfasına geçince her ikisi aynı
-//     committed state'i ve timer'ı paylaşır.
+// Committed state ve debounce timer'ları aynı postId için
+// birden fazla component instance'ında (feed + detay) paylaşılır.
 
 const _committed = new Map<number, LikeState>();
-const _timers    = new Map<number, ReturnType<typeof setTimeout>>();
+const _timers = new Map<number, ReturnType<typeof setTimeout>>();
 
-function getCommitted(postId: number): LikeState {
-  return _committed.get(postId) ?? { isLiked: false, likeCount: 0 };
+function getCommitted(postId: number, fallback: LikeState): LikeState {
+  return _committed.get(postId) ?? fallback;
 }
 
 // ─── useLike ──────────────────────────────────────────────────────────────────
 //
 // Özellikler:
-//   • React Query cache  → her iki sayfada anlık senkronizasyon
+//   • Sunucu verisiyle başlar (likedByMe + likeCount), feed'den geçince doğru
+//   • React Query cache  → feed ve detay sayfası senkron çalışır
 //   • Optimistic UI      → tıklama anında görsel güncelleme
 //   • Debounce 600 ms    → hızlı çift-tıkta hiç API isteği atılmaz
-//   • Rollback           → API hata dönerse committed state'e geri dönülür
+//   • Rollback           → API hata dönerse committed state'e geri döner
+//   • API yanıtını kullanır → backend'in döndürdüğü gerçek sayıyla güncellenir
 
-export function useLike(postId: number) {
+export function useLike(
+  postId: number,
+  initialIsLiked = false,
+  initialLikeCount = 0,
+) {
   const queryClient = useQueryClient();
 
-  // React Query cache = tek kaynak, feed + detay paylaşır
-  const { data: likeState = { isLiked: false, likeCount: 0 } } =
-    useQuery<LikeState>({
-      queryKey:    ["postLike", postId],
-      // Gerçek bir API isteği yok; sadece committed state'i döndürür
-      queryFn:     () => getCommitted(postId),
-      // Cache'de veri yoksa committed state ile başla
-      initialData: () => getCommitted(postId),
-      staleTime:   Infinity, // asla otomatik refetch
-      gcTime:      10 * 60 * 1000,
-    });
+  const fallback: LikeState = { isLiked: initialIsLiked, likeCount: initialLikeCount };
+
+  const { data: likeState = fallback } = useQuery<LikeState>({
+    queryKey: ["postLike", postId],
+    queryFn: () => getCommitted(postId, fallback),
+    // Cache'de henüz veri yoksa sunucudan gelen başlangıç değerini kullan
+    initialData: () => {
+      const existing = queryClient.getQueryData<LikeState>(["postLike", postId]);
+      if (existing) return existing;
+      // İlk kez görülen post: committed'ı sunucu verisiyle başlat
+      _committed.set(postId, fallback);
+      return fallback;
+    },
+    staleTime: Infinity,
+    gcTime: 10 * 60 * 1000,
+  });
 
   const toggle = useCallback(() => {
-    // Şu anki cache değerini oku (iki instance aynı değeri okur)
     const current: LikeState =
-      queryClient.getQueryData<LikeState>(["postLike", postId]) ??
-      { isLiked: false, likeCount: 0 };
+      queryClient.getQueryData<LikeState>(["postLike", postId]) ?? fallback;
 
-    const newLiked = !current.isLiked;
-    const newCount = newLiked ? current.likeCount + 1 : current.likeCount - 1;
-    const newState: LikeState = { isLiked: newLiked, likeCount: newCount };
+    const optimisticLiked = !current.isLiked;
+    const optimisticCount = optimisticLiked
+      ? current.likeCount + 1
+      : Math.max(0, current.likeCount - 1);
+    const optimisticState: LikeState = {
+      isLiked: optimisticLiked,
+      likeCount: optimisticCount,
+    };
 
     // 1. Optimistic: cache'i hemen güncelle → feed ve detay anında yenilenir
-    queryClient.setQueryData(["postLike", postId], newState);
+    queryClient.setQueryData(["postLike", postId], optimisticState);
 
     // 2. Önceki debounce timer'ı iptal et
     const existing = _timers.get(postId);
     if (existing) clearTimeout(existing);
 
     // 3. Net sonuç committed ile aynıysa API çağrısına gerek yok
-    const committed = getCommitted(postId);
-    if (newLiked === committed.isLiked) {
+    const committed = getCommitted(postId, fallback);
+    if (optimisticLiked === committed.isLiked) {
       _timers.delete(postId);
       return;
     }
 
-    // 4. Debounced API çağrısı
+    // 4. Debounced API çağrısı — yanıttaki gerçek değerleri kullan
     const timer = setTimeout(async () => {
       try {
-        await postApi.toggleLike(postId);
-        _committed.set(postId, newState); // committed state güncelle
+        const result = await postApi.toggleLike(postId);
+        const confirmedState: LikeState = {
+          isLiked: result.liked,
+          likeCount: result.newLikeCount,
+        };
+        _committed.set(postId, confirmedState);
+        queryClient.setQueryData(["postLike", postId], confirmedState);
       } catch {
         // Rollback: cache'i committed state'e döndür
-        queryClient.setQueryData(["postLike", postId], getCommitted(postId));
+        queryClient.setQueryData(["postLike", postId], getCommitted(postId, fallback));
       }
       _timers.delete(postId);
     }, 600);
@@ -89,7 +103,7 @@ export function useLike(postId: number) {
   }, [postId, queryClient]);
 
   return {
-    isLiked:   likeState.isLiked,
+    isLiked: likeState.isLiked,
     likeCount: likeState.likeCount,
     toggle,
   };
