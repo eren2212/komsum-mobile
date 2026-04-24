@@ -1,15 +1,15 @@
 import type { ComponentProps } from "react";
-import { Alert, Image, StatusBar, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StatusBar, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Image } from "expo-image";
 
 import { userApi } from "@/api/user";
 import { useAuthStore } from "@/store/authStore";
 import { colors } from "@/theme/color";
 import { SkeletonBox } from "@/components";
-import { BackButton } from "@/components";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -212,7 +212,16 @@ export default function ProfileScreen() {
             {profile.avatarUrl ? (
               <Image
                 source={{ uri: profile.avatarUrl }}
-                className="w-[96px] h-[96px] rounded-full border-3 border-white/20"
+                style={{
+                  width: 96,
+                  height: 96,
+                  borderRadius: 48,
+                  borderColor: colors.primary.light,
+                  borderWidth: 0.5,
+                }}
+                contentFit="cover"
+                transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                cachePolicy="memory-disk"
               />
             ) : (
               <View

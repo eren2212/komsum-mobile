@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Animated,
   FlatList,
-  Image,
   Pressable,
   RefreshControl,
   StatusBar,
@@ -15,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
+import { Image } from "expo-image";
 
 import { postApi, DtoPost } from "@/api/post";
 import { userApi } from "@/api/user";
@@ -166,10 +166,24 @@ function PostCard({ post }: PostCardProps) {
           <View className="p-4">
             {/* Author row */}
             <View className="flex-row items-start mb-3">
-              <View className="w-[44px] h-[44px] rounded-full bg-primary items-center justify-center">
-                <Text className="text-[15px] font-bold text-white">
-                  {getInitials(post.authorFirstName, post.authorLastName)}
-                </Text>
+              <View className="w-[44px] h-[44px] rounded-full bg-primary items-center justify-center overflow-hidden">
+                {post.authorAvatarUrl ? (
+                  <Image
+                    source={{ uri: post.authorAvatarUrl }}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                    }}
+                    contentFit="cover"
+                    transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                    cachePolicy="memory-disk"
+                  />
+                ) : (
+                  <Text className="text-[16px] font-bold text-white">
+                    {getInitials(post.authorFirstName, post.authorLastName)}
+                  </Text>
+                )}
               </View>
               <View className="flex-1 ml-3">
                 <Text className="text-[16px] font-bold text-[#181c2e] mb-0.5">
@@ -193,8 +207,15 @@ function PostCard({ post }: PostCardProps) {
             {post.imageUrl ? (
               <Image
                 source={{ uri: post.imageUrl }}
-                className="w-full aspect-video rounded-xl mb-3"
-                resizeMode="cover"
+                style={{
+                  width: "100%",
+                  aspectRatio: 16 / 9,
+                  borderRadius: 12,
+                  marginBottom: 12,
+                }}
+                contentFit="cover"
+                transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                cachePolicy="memory-disk"
               />
             ) : null}
 
@@ -245,11 +266,23 @@ function PostCard({ post }: PostCardProps) {
         {/* Card header */}
         <View className="flex-row items-start mb-3">
           <View
-            className="w-[46px] h-[46px] rounded-full items-center justify-center"
+            className="w-[46px] h-[46px] rounded-full items-center justify-center overflow-hidden"
             style={{ backgroundColor: isHelp ? "#FEF3C7" : "#121223" }}
           >
             {isHelp ? (
               <Ionicons name="hand-right" size={20} color="#B45309" />
+            ) : post.authorAvatarUrl ? (
+              <Image
+                source={{ uri: post.authorAvatarUrl }}
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 23,
+                }}
+                transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                cachePolicy="memory-disk"
+                contentFit="cover"
+              />
             ) : (
               <Text className="text-[16px] font-bold text-white">
                 {getInitials(post.authorFirstName, post.authorLastName)}
@@ -288,8 +321,15 @@ function PostCard({ post }: PostCardProps) {
         {post.imageUrl ? (
           <Image
             source={{ uri: post.imageUrl }}
-            className="w-full aspect-video rounded-xl mb-3"
-            resizeMode="cover"
+            style={{
+              width: "100%",
+              aspectRatio: 16 / 9,
+              borderRadius: 12,
+              marginBottom: 12,
+            }}
+            transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+            cachePolicy="memory-disk"
+            contentFit="cover"
           />
         ) : null}
 
@@ -372,7 +412,7 @@ function SkeletonList() {
 
 export default function HomeScreen() {
   const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ["myProfile"],
+    queryKey: ["me", "profile", "myProfile"],
     queryFn: () => userApi.getMyProfile(),
     staleTime: 5 * 60 * 1000,
   });
@@ -440,7 +480,14 @@ export default function HomeScreen() {
               {profile?.avatarUrl ? (
                 <Image
                   source={{ uri: profile.avatarUrl }}
-                  className="w-[46px] h-[46px] rounded-full"
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 23,
+                  }}
+                  transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                  cachePolicy="memory-disk"
+                  contentFit="cover"
                 />
               ) : (
                 <Ionicons name="person" size={22} color="#fff" />

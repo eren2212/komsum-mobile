@@ -29,7 +29,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Komsum, galerinizdeki fotoğrafları seçmenize izin istiyor.",
+          "cameraPermission": "Komsum, fotoğraf çekebilmek için kameraya erişmek istiyor."
+        }
+      ]
     ]
   }
 }

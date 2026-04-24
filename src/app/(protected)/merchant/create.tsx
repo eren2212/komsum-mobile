@@ -83,7 +83,7 @@ function Step1Content({
   return (
     <View className="px-6 pt-4">
       {/* Kapak fotoğrafı alanı */}
-      <View className="h-[190px] w-full rounded-xl overflow-hidden mb-6">
+      {/* <View className="h-[190px] w-full rounded-xl overflow-hidden mb-6">
         <View className="flex-1 items-center justify-center bg-[#F0F5FA]">
           <View className="w-[64px] h-[64px] rounded-full bg-[rgba(255,107,74,0.12)] items-center justify-center mb-3">
             <Ionicons
@@ -99,7 +99,7 @@ function Step1Content({
             Müşterilerinizi etkileyecek bir görsel seçin
           </Text>
         </View>
-      </View>
+      </View> */}
 
       {/* Mağaza adı */}
       <View className="mb-5">

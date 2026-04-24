@@ -4,7 +4,6 @@ import {
   Alert,
   Animated,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -23,6 +22,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Image } from "expo-image";
 
 import { commentApi, DtoComment } from "@/api/comment";
 import { DtoPost } from "@/api/post";
@@ -441,9 +441,23 @@ export default function PostDetailScreen() {
           {isHelp ? (
             <Ionicons name="hand-right" size={22} color="#B45309" />
           ) : (
-            <Text className="text-[16px] font-bold text-white">
-              {getInitials(post.authorFirstName, post.authorLastName)}
-            </Text>
+            post.authorAvatarUrl ? (
+              <Image
+                source={{ uri: post.authorAvatarUrl }}
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                }}
+                transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                cachePolicy="memory-disk"
+                contentFit="cover"
+              />
+            ) : (
+              <Text className="text-[16px] font-bold text-white">
+                {getInitials(post.authorFirstName, post.authorLastName)}
+              </Text>
+            )
           )}
         </View>
 
@@ -498,8 +512,16 @@ export default function PostDetailScreen() {
       {post.imageUrl ? (
         <Image
           source={{ uri: post.imageUrl }}
-          className="mx-4 mb-3 rounded-[16px] aspect-video"
-          resizeMode="cover"
+          style={{
+            width: "90%",
+            aspectRatio: 16 / 9,
+            borderRadius: 12,
+            marginBottom: 12,
+            alignSelf: "center",
+          }}
+          transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+          cachePolicy="memory-disk"
+          contentFit="cover"
         />
       ) : null}
 

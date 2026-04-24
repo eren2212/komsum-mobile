@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     FlatList,
     KeyboardAvoidingView,
@@ -16,8 +17,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
 
 import { marketplaceApi, DtoCreateListing, ListingType } from "@/api/marketplace";
+import { uploadApi } from "@/api/upload";
 import { colors } from "@/theme/color";
 import { BackButton, CustomButton } from "@/components";
 
@@ -49,51 +53,87 @@ type FormErrors = {
 
 function ImageUploadSection({
     imageUrl,
+    isUploading,
     onPress,
+    onRemove,
 }: {
     imageUrl: string;
+    isUploading: boolean;
     onPress: () => void;
+    onRemove: () => void;
 }) {
+    if (imageUrl) {
+        return (
+            <View className="mx-4 mb-2">
+                <View className="relative rounded-[16px] overflow-hidden">
+                    <Image
+                        source={{ uri: imageUrl }}
+                        style={{
+                            width: "100%",
+                            aspectRatio: 4 / 3,
+                            borderRadius: 12,
+                        }}
+                        contentFit="cover"
+                        transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                        cachePolicy="memory-disk"
+                    />
+                    {/* Kaldır butonu */}
+                    <TouchableOpacity
+                        onPress={onRemove}
+                        activeOpacity={0.8}
+                        className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/55 items-center justify-center"
+                    >
+                        <Ionicons name="close" size={20} color="#fff" />
+                    </TouchableOpacity>
+                    {/* Değiştir butonu */}
+                    <TouchableOpacity
+                        onPress={onPress}
+                        disabled={isUploading}
+                        activeOpacity={0.85}
+                        className="absolute bottom-3 right-3 flex-row items-center gap-1.5 px-4 py-2 rounded-full bg-black/55"
+                    >
+                        <Ionicons name="camera" size={14} color="#fff" />
+                        <Text className="text-white text-[13px] font-semibold">Değiştir</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    }
+
     return (
         <TouchableOpacity
             activeOpacity={0.8}
             onPress={onPress}
+            disabled={isUploading}
             className="mx-4 mb-2"
         >
             <View
-                className={`rounded-[12px] items-center py-10 gap-4 bg-[#F8FAFC] border-2 border-dashed ${imageUrl ? "" : "border-[#CBD5E1]"
-                    }`}
-                style={imageUrl ? { borderColor: colors.primary.DEFAULT } : {}}
+                className="rounded-[16px] items-center py-10 gap-4 bg-[#F8FAFC] border-2 border-dashed border-[#CBD5E1]"
             >
-                <View
-                    className={`w-[62px] h-[62px] rounded-full items-center justify-center ${imageUrl ? "bg-[#FFF1EE]" : "bg-[#F1F5F9]"
-                        }`}
-                >
-                    <Ionicons
-                        name={imageUrl ? "image" : "camera-outline"}
-                        size={28}
-                        color={imageUrl ? colors.primary.DEFAULT : "#94A3B8"}
-                    />
+                <View className="w-[62px] h-[62px] rounded-full items-center justify-center bg-[#F1F5F9]">
+                    {isUploading ? (
+                        <ActivityIndicator color={colors.primary.DEFAULT} />
+                    ) : (
+                        <Ionicons name="camera-outline" size={28} color="#94A3B8" />
+                    )}
                 </View>
 
                 <View className="items-center gap-1 px-6">
                     <Text className="text-[16px] font-bold text-neutral-800 text-center">
-                        {imageUrl ? "Fotoğraf Eklendi" : "Fotoğraf Ekle veya Çek"}
+                        {isUploading ? "Yükleniyor..." : "Fotoğraf Ekle"}
                     </Text>
-                    <Text className="text-[12px] text-neutral-400 text-center">
-                        {imageUrl
-                            ? imageUrl.length > 40
-                                ? imageUrl.substring(0, 40) + "..."
-                                : imageUrl
-                            : "En az bir fotoğraf ekleyerek ürününüzü daha hızlı satın."}
-                    </Text>
+                    {!isUploading && (
+                        <Text className="text-[12px] text-neutral-400 text-center">
+                            En az bir fotoğraf ekleyerek ürününüzü daha hızlı satın.
+                        </Text>
+                    )}
                 </View>
 
-                <View className="px-6 py-3 rounded-2xl bg-[#121223]">
-                    <Text className="text-white text-[14px] font-bold">
-                        {imageUrl ? "Fotoğrafı Değiştir" : "Fotoğraf Seç"}
-                    </Text>
-                </View>
+                {!isUploading && (
+                    <View className="px-6 py-3 rounded-2xl bg-[#121223]">
+                        <Text className="text-white text-[14px] font-bold">Fotoğraf Seç</Text>
+                    </View>
+                )}
             </View>
         </TouchableOpacity>
     );
@@ -117,6 +157,8 @@ export default function MarketplaceCreateScreen() {
 
     const [title, setTitle] = useState("");
     const [imageUrl, setImageUrl] = useState("");
+    const [localImageUri, setLocalImageUri] = useState<string | null>(null);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [listingType, setListingType] = useState<ListingType>("FOR_SALE");
     const [price, setPrice] = useState("");
     const [category, setCategory] = useState("");
@@ -142,7 +184,7 @@ export default function MarketplaceCreateScreen() {
     const validate = (): boolean => {
         const errs: FormErrors = {};
         if (!title.trim()) errs.title = "Ürün başlığı boş olamaz.";
-        if (!imageUrl.trim()) errs.imageUrl = "Lütfen bir fotoğraf URL'si girin.";
+        if (!imageUrl.trim() && !localImageUri) errs.imageUrl = "Lütfen bir ürün fotoğrafı ekleyin.";
         if (listingType === "FOR_SALE") {
             const p = parseFloat(price);
             if (!price.trim() || isNaN(p) || p <= 0)
@@ -153,36 +195,53 @@ export default function MarketplaceCreateScreen() {
         return Object.keys(errs).length === 0;
     };
 
-    const onShare = () => {
+    const onShare = async () => {
         if (!validate()) return;
+
+        let finalImageUrl = imageUrl;
+
+        if (localImageUri) {
+            setIsUploadingImage(true);
+            try {
+                finalImageUrl = await uploadApi.uploadListingImage(localImageUri);
+            } catch {
+                Alert.alert("Hata", "Fotoğraf yüklenirken bir sorun oluştu, tekrar dene.");
+                setIsUploadingImage(false);
+                return;
+            }
+            setIsUploadingImage(false);
+        }
+
         createListing({
             title: title.trim(),
-            imageUrl: imageUrl.trim(),
+            imageUrl: finalImageUrl.trim(),
             type: listingType,
             price: listingType === "FOR_SALE" ? parseFloat(price) : null,
             category,
         });
     };
 
-    const onPickImage = () => {
-        Alert.prompt(
-            "Fotoğraf URL",
-            "Ürün fotoğrafının URL'sini girin:",
-            [
-                { text: "İptal", style: "cancel" },
-                {
-                    text: "Kaydet",
-                    onPress: (value?: string) => {
-                        if (value !== undefined) {
-                            setImageUrl(value);
-                            setErrors((prev) => ({ ...prev, imageUrl: undefined }));
-                        }
-                    },
-                },
-            ],
-            "plain-text",
-            imageUrl
-        );
+    const onPickImage = async () => {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+            Alert.alert("İzin Gerekli", "Galeri erişimine izin vermeniz gerekiyor.");
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.85,
+        });
+
+        if (result.canceled || !result.assets[0]) return;
+        setLocalImageUri(result.assets[0].uri);
+        setErrors((prev) => ({ ...prev, imageUrl: undefined }));
+    };
+
+    const onRemoveImage = () => {
+        setLocalImageUri(null);
+        setImageUrl("");
     };
 
     return (
@@ -217,7 +276,12 @@ export default function MarketplaceCreateScreen() {
                     contentContainerStyle={{ paddingBottom: 120, paddingTop: 16 }}
                 >
                     {/* Fotoğraf yükleme */}
-                    <ImageUploadSection imageUrl={imageUrl} onPress={onPickImage} />
+                    <ImageUploadSection
+                        imageUrl={localImageUri || imageUrl}
+                        isUploading={isUploadingImage}
+                        onPress={onPickImage}
+                        onRemove={onRemoveImage}
+                    />
                     {errors.imageUrl && (
                         <Text className="text-red-500 text-xs mx-5 mb-3">
                             {errors.imageUrl}
@@ -358,10 +422,10 @@ export default function MarketplaceCreateScreen() {
                 {/* ── Sabit Alt Buton ── */}
                 <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-neutral-100 px-4 py-3">
                     <CustomButton
-                        label="İlanı Paylaş"
+                        label={isUploadingImage ? "Fotoğraf Yükleniyor..." : "İlanı Paylaş"}
                         onPress={onShare}
                         loading={isPending}
-                        disabled={isPending}
+                        disabled={isPending || isUploadingImage}
                         fullWidth
                         rightIcon={
                             !isPending ? (

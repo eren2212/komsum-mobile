@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import {
-  Image,
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,10 +15,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
 
 import { userApi } from "@/api/user";
 import { merchantApi } from "@/api/merchant";
 import { postApi, PostType } from "@/api/post";
+import { uploadApi } from "@/api/upload";
 import { colors } from "@/theme/color";
 import { SkeletonBox } from "@/components";
 
@@ -140,6 +144,8 @@ export default function CreateScreen() {
 
   const [mode, setMode] = useState<PostMode>("NORMAL");
   const [content, setContent] = useState("");
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // ── Veri ──
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -175,20 +181,51 @@ export default function CreateScreen() {
     },
   });
 
-  const onShare = () => {
+  const onPickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("İzin Gerekli", "Galeri erişimine izin vermeniz gerekiyor.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.85,
+    });
+
+    if (result.canceled || !result.assets[0]) return;
+    setImageUri(result.assets[0].uri);
+  };
+
+  const onRemoveImage = () => setImageUri(null);
+
+  const onShare = async () => {
     if (!content.trim()) return;
 
-    console.log("🚀 İstek Atılıyor... İçerik:", content.trim()); // BUNA BAKACAĞIZ
-    const type: PostType =
-      mode === "ESNAF" ? "SPONSORED" : "STANDARD";
+    const type: PostType = mode === "ESNAF" ? "SPONSORED" : "STANDARD";
+    let uploadedImageUrl: string | undefined;
 
-    createPost({ content: content.trim(), type, imageUrl: undefined });
-    console.log("🚀 İstek Atıldı... İçerik:", content.trim());
+    if (imageUri) {
+      setIsUploadingImage(true);
+      try {
+        uploadedImageUrl = await uploadApi.uploadPostImage(imageUri);
+      } catch {
+        Alert.alert("Hata", "Fotoğraf yüklenirken sorun oluştu. Fotoğrafsız paylaşmak ister misin?", [
+          { text: "İptal", style: "cancel" },
+          { text: "Fotoğrafsız Paylaş", onPress: () => createPost({ content: content.trim(), type, imageUrl: undefined }) },
+        ]);
+        setIsUploadingImage(false);
+        return;
+      } finally {
+        setIsUploadingImage(false);
+      }
+    }
 
+    createPost({ content: content.trim(), type, imageUrl: uploadedImageUrl });
   };
-  const imageUrl = null;
 
-  const canShare = content.trim().length > 0 && !isPending;
+  const canShare = content.trim().length > 0 && !isPending && !isUploadingImage;
 
   const placeholder =
     mode === "ESNAF"
@@ -229,10 +266,8 @@ export default function CreateScreen() {
             className="px-[18px] py-[9px] rounded-[20px]"
             style={{ backgroundColor: canShare ? "#121223" : "#E8EAF0" }}
           >
-            {isPending ? (
-              <Text className="text-[13px] font-bold text-white">
-                ...
-              </Text>
+            {isPending || isUploadingImage ? (
+              <ActivityIndicator size="small" color="#fff" />
             ) : (
               <Text
                 className="text-[13px] font-bold"
@@ -292,7 +327,14 @@ export default function CreateScreen() {
             {profile?.avatarUrl ? (
               <Image
                 source={{ uri: profile.avatarUrl }}
-                className="w-10 h-10 rounded-full mt-0.5"
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                }}
+                contentFit="cover"
+                transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                cachePolicy="memory-disk"
               />
             ) : (
               <View className="w-10 h-10 rounded-full bg-[#FFF1EE] items-center justify-center mt-0.5">
@@ -328,6 +370,46 @@ export default function CreateScreen() {
               {content.length} / 500
             </Text>
           )}
+
+          {/* ── Fotoğraf önizleme ── */}
+          {imageUri && (
+            <View className="mt-4 relative">
+              <Image
+                source={{ uri: imageUri }}
+                style={{
+                  width: "100%",
+                  aspectRatio: 16 / 9,
+                  borderRadius: 12,
+                }}
+                contentFit="cover"
+                transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                cachePolicy="memory-disk"
+              />
+              <TouchableOpacity
+                onPress={onRemoveImage}
+                activeOpacity={0.8}
+                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 items-center justify-center"
+              >
+                <Ionicons name="close" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* ── Araç çubuğu ── */}
+          <View className="flex-row items-center gap-3 mt-4 pt-4 border-t border-neutral-100">
+            <TouchableOpacity
+              onPress={onPickImage}
+              disabled={isUploadingImage}
+              activeOpacity={0.7}
+              className="flex-row items-center gap-2 px-4 py-2.5 rounded-[14px] bg-[#F5F6FA]"
+              style={{ opacity: isUploadingImage ? 0.5 : 1 }}
+            >
+              <Ionicons name="image-outline" size={18} color="#646982" />
+              <Text className="text-[13px] font-semibold text-[#646982]">
+                {imageUri ? "Fotoğrafı Değiştir" : "Fotoğraf Ekle"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

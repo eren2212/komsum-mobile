@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,8 +14,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
 
 import { userApi, DtoUserUpdate } from "@/api/user";
+import { uploadApi } from "@/api/upload";
 import { colors } from "@/theme/color";
 import { BackButton, CustomButton, CustomInput, SkeletonBox } from "@/components";
 
@@ -71,10 +74,12 @@ function ProfileEditSkeleton() {
 function AvatarSection({
   avatarUrl,
   initials,
+  isUploading,
   onChangePress,
 }: {
   avatarUrl?: string | null;
   initials: string;
+  isUploading: boolean;
   onChangePress: () => void;
 }) {
   return (
@@ -87,9 +92,12 @@ function AvatarSection({
               width: 96,
               height: 96,
               borderRadius: 48,
-              borderWidth: 2,
               borderColor: colors.primary.light,
+              borderWidth: 0.5,
             }}
+            transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+            cachePolicy="memory-disk"
+            contentFit="cover"
           />
         ) : (
           <View
@@ -106,9 +114,26 @@ function AvatarSection({
           </View>
         )}
 
+        {/* Yükleniyor overlay */}
+        {isUploading && (
+          <View
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: 48,
+              backgroundColor: "rgba(0,0,0,0.45)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <ActivityIndicator color="#fff" />
+          </View>
+        )}
+
         {/* Camera button */}
         <TouchableOpacity
           onPress={onChangePress}
+          disabled={isUploading}
           activeOpacity={0.85}
           style={{
             position: "absolute",
@@ -122,15 +147,16 @@ function AvatarSection({
             justifyContent: "center",
             borderWidth: 2,
             borderColor: "#F5F6FA",
+            opacity: isUploading ? 0.5 : 1,
           }}
         >
           <Ionicons name="camera" size={16} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={onChangePress} activeOpacity={0.7}>
+      <TouchableOpacity onPress={onChangePress} disabled={isUploading} activeOpacity={0.7}>
         <Text className="text-primary text-sm font-medium">
-          Profil Fotoğrafını Değiştir
+          {isUploading ? "Yükleniyor..." : "Profil Fotoğrafını Değiştir"}
         </Text>
       </TouchableOpacity>
     </View>
@@ -161,6 +187,9 @@ export default function ProfileEditScreen() {
     initializedRef.current = true;
   }, [profile]);
 
+  const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
   const { mutate: updateProfile, isPending, error } = useMutation({
     mutationFn: (payload: DtoUserUpdate) => userApi.updateProfile(payload),
     onSuccess: () => {
@@ -169,30 +198,44 @@ export default function ProfileEditScreen() {
     },
   });
 
-  const onSave = () => {
+  const onSave = async () => {
+    let finalAvatarUrl = avatarUrl;
+
+    if (localAvatarUri) {
+      setIsUploadingAvatar(true);
+      try {
+        finalAvatarUrl = await uploadApi.uploadAvatar(localAvatarUri);
+      } catch {
+        Alert.alert("Hata", "Profil fotoğrafı yüklenirken sorun oluştu, tekrar dene.");
+        setIsUploadingAvatar(false);
+        return;
+      }
+      setIsUploadingAvatar(false);
+    }
+
     updateProfile({
       firstname: firstname.trim() || undefined,
       lastname: lastname.trim() || undefined,
-      avatarUrl: avatarUrl.trim() || undefined,
+      avatarUrl: finalAvatarUrl.trim() || undefined,
     });
   };
 
-  const onChangeAvatar = () => {
-    Alert.prompt(
-      "Profil Fotoğrafı",
-      "Fotoğraf URL'sini girin:",
-      [
-        { text: "İptal", style: "cancel" },
-        {
-          text: "Kaydet",
-          onPress: (value: string | undefined) => {
-            if (value !== undefined) setAvatarUrl(value);
-          },
-        },
-      ],
-      "plain-text",
-      avatarUrl
-    );
+  const onChangeAvatar = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("İzin Gerekli", "Galeri erişimine izin vermeniz gerekiyor.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets[0]) return;
+    setLocalAvatarUri(result.assets[0].uri);
   };
 
   if (isLoading) {
@@ -205,7 +248,9 @@ export default function ProfileEditScreen() {
 
   const isChanged =
     (profile.firstname ?? "").trim() !== firstname.trim() ||
-    (profile.lastname ?? "").trim() !== lastname.trim();
+    (profile.lastname ?? "").trim() !== lastname.trim() ||
+    (profile.avatarUrl ?? "") !== avatarUrl ||
+    localAvatarUri !== null;
 
   return (
     <SafeAreaView className="flex-1 bg-neutral-50">
@@ -234,8 +279,9 @@ export default function ProfileEditScreen() {
         >
           {/* Avatar */}
           <AvatarSection
-            avatarUrl={avatarUrl || profile.avatarUrl}
+            avatarUrl={localAvatarUri || avatarUrl || profile.avatarUrl}
             initials={initials}
+            isUploading={isUploadingAvatar}
             onChangePress={onChangeAvatar}
           />
 
@@ -328,7 +374,7 @@ export default function ProfileEditScreen() {
             onPress={onSave}
             loading={isPending}
             activeOpacity={0.8}
-            disabled={isPending || !isChanged}
+            disabled={isPending || !isChanged || isUploadingAvatar}
             fullWidth
             rightIcon={
               <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />

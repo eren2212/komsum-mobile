@@ -4,7 +4,6 @@ import {
   Alert,
   Dimensions,
   FlatList,
-  Image,
   Text,
   TouchableOpacity,
   View,
@@ -17,6 +16,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Image } from "expo-image";
 
 import { marketplaceApi, DtoListing, ListingStatus } from "@/api/marketplace";
 import { colors } from "@/theme/color";
@@ -124,8 +124,13 @@ function ListingCard({ listing, onStatusChange, isUpdating }: ListingCardProps) 
         {listing.imageUrl ? (
           <Image
             source={{ uri: listing.imageUrl }}
-            className="w-full h-full"
-            resizeMode="cover"
+            style={{
+              width: "100%",
+              height: "100%",
+            }}
+            transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+            cachePolicy="memory-disk"
+            contentFit="cover"
           />
         ) : (
           <View className="flex-1 items-center justify-center">

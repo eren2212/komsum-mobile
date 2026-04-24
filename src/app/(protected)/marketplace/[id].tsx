@@ -1,8 +1,9 @@
-import { Dimensions, Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from "react-native";
+import { Dimensions, ScrollView, StatusBar, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Image } from "expo-image";
 
 import { DtoListing } from "@/api/marketplace";
 import { colors } from "@/theme/color";
@@ -135,8 +136,13 @@ export default function ListingDetailScreen() {
                     {listing.imageUrl ? (
                         <Image
                             source={{ uri: listing.imageUrl }}
-                            className="w-full h-full"
-                            resizeMode="cover"
+                            style={{
+                                width: "100%",
+                                height: "100%",
+                            }}
+                            transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                            cachePolicy="memory-disk"
+                            contentFit="cover"
                         />
                     ) : (
                         <View className="flex-1 items-center justify-center">

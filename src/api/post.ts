@@ -36,6 +36,7 @@ export interface DtoPost {
   shopName?: string | null;
   authorFirstName: string;
   authorLastName: string;
+  authorAvatarUrl?: string | null;
   authorKarmaScore?: number | null;
   neighborhoodName: string;
   likeCount: number;
