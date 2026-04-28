@@ -1,11 +1,12 @@
 import { useEffect } from "react";
-import { ActivityIndicator, StatusBar, View } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../../global.css";
 
 import { useAuthStore } from "@/store/authStore";
+import { useOnboardingStore } from "@/store/onboardingStore";
 import { setupInterceptors } from "@/api/interceptors";
+import SplashScreen from "@/components/SplashScreen";
 
 const queryClient = new QueryClient();
 
@@ -14,39 +15,47 @@ setupInterceptors();
 
 export default function RootLayout() {
   const { tokens, isHydrating, hydrateTokens } = useAuthStore();
+  const { hasSeenOnboarding, isChecked: isOnboardingChecked, check } = useOnboardingStore();
   const router = useRouter();
   const segments = useSegments();
 
-  // Uygulama açılışında SecureStore'dan token yükle
+  // Uygulama açılışında hem Token'ları hem de Onboarding durumunu yükle
   useEffect(() => {
     hydrateTokens();
+    check();
   }, []);
 
-  // Hydration bitmeden navigation guard çalışmasın (signin flash'ı önler)
+  // Hydration veya Onboarding kontrolü bitmeden navigation guard çalışmasın
   useEffect(() => {
-    if (isHydrating) return;
+    if (isHydrating || !isOnboardingChecked) return;
 
     const inAuthGroup = segments[0] === "auth";
+    const inOnboarding = segments[0] === "onboarding";
 
-    if (!tokens && !inAuthGroup) {
-      router.replace("/auth/signin");
+    // 1. Kural: Kullanıcı onboarding'i görmediyse, zorla onboarding'e at.
+    if (!hasSeenOnboarding) {
+      if (!inOnboarding) {
+        router.replace("/onboarding");
+      }
+      return; // Diğer kurallara bakma
     }
-  }, [tokens, segments, isHydrating]);
 
-  // Token yüklenirken marka renginde loading ekranı göster
-  if (isHydrating) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: "#121223",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <ActivityIndicator size="large" color="#FF6B4A" />
-      </View>
-    );
+    // 2. Kural: Onboarding'i görmüş ama giriş yapmamışsa, signin'e at.
+    if (!tokens) {
+      if (!inAuthGroup) {
+        router.replace("/auth/signin");
+      }
+    }
+    // 3. Kural: Hem onboarding'i görmüş hem de giriş yapmışsa (ve yanlışlıkla auth/onboarding sayfalarındaysa) içeri al.
+    else if (inAuthGroup || inOnboarding) {
+      router.replace("/(tabs)");
+    }
+
+  }, [tokens, segments, isHydrating, isOnboardingChecked, hasSeenOnboarding]);
+
+  // Token veya Onboarding yüklenirken splash ekranı göster
+  if (isHydrating || !isOnboardingChecked) {
+    return <SplashScreen />;
   }
 
   return (

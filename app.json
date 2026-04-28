@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Komsum Mobile",
+    "name": "Komsum",
     "slug": "mobile",
     "scheme": "komsum",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/komsum-appikon-turuncu.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -18,11 +18,16 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/komsum-appikon-turuncu-seffaf.png",
+        "backgroundColor": "#FF6B4A"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.eren1247.mobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
