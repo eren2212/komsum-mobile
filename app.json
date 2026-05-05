@@ -41,7 +41,8 @@
           "photosPermission": "Komsum, galerinizdeki fotoğrafları seçmenize izin istiyor.",
           "cameraPermission": "Komsum, fotoğraf çekebilmek için kameraya erişmek istiyor."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }

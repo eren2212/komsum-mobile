@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { Alert, StatusBar, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StatusBar, Text, TouchableOpacity, View, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +10,11 @@ import { userApi } from "@/api/user";
 import { useAuthStore } from "@/store/authStore";
 import { colors } from "@/theme/color";
 import { SkeletonBox } from "@/components";
+// Bunu bul ve ScrollView'u içine ekle:
+
+
+// Şunu SİL (Yanlış import):
+// import { ScrollView } from "react-native-reanimated/lib/typescript/Animated";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -183,11 +188,23 @@ export default function ProfileScreen() {
     //   onPress: () => { },
     // },
     {
+      icon: "storefront-outline",
+      label: "Esnaf Profilim",
+      onPress: () => router.push("/merchant/esnaf"),
+    },
+    {
+      icon: "bookmark-outline",
+      label: "Etkinlikler",
+      onPress: () => router.push("/profile/my-events"),
+    },
+
+    {
       icon: "log-out-outline",
       label: "Çıkış Yap",
       onPress: handleLogout,
       danger: true,
     },
+
   ];
 
   return (
@@ -239,16 +256,21 @@ export default function ProfileScreen() {
 
       {/* ── White card ── */}
       <View
-        className="flex-1 bg-white px-5 pt-4"
+        className="flex-1 bg-white overflow-hidden"
         style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32 }}
       >
-        {menuItems.map((item, index) => (
-          <MenuItem
-            key={item.label}
-            item={item}
-            isLast={index === menuItems.length - 1}
-          />
-        ))}
+        <ScrollView
+          showsVerticalScrollIndicator={false} // Sağdaki çirkin kaydırma çubuğunu gizler
+          contentContainerClassName="px-5 pt-4 pb-40" // pb-10 ile en alta nefes alma boşluğu verdik
+        >
+          {menuItems.map((item, index) => (
+            <MenuItem
+              key={item.label}
+              item={item}
+              isLast={index === menuItems.length - 1}
+            />
+          ))}
+        </ScrollView>
       </View>
     </SafeAreaView>
   );

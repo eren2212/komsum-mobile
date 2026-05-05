@@ -7,7 +7,7 @@ import { Image } from "expo-image";
 
 import { DtoListing } from "@/api/marketplace";
 import { colors } from "@/theme/color";
-import { SkeletonBox } from "@/components";
+import { BackButton, SkeletonBox } from "@/components";
 
 const SCREEN_W = Dimensions.get("window").width;
 
@@ -111,13 +111,7 @@ export default function ListingDetailScreen() {
 
                 {/* ── Navigasyon ── */}
                 <View className="flex-row items-center justify-between px-4 py-3">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        activeOpacity={0.7}
-                        className="w-11 h-11 rounded-full bg-slate-50 items-center justify-center"
-                    >
-                        <Ionicons name="chevron-back" size={22} color="#121223" />
-                    </TouchableOpacity>
+                <BackButton />
 
                     {/* Durum rozeti - Hex kodları dinamik olduğu için renkleri style'da tuttuk */}
                     <View
@@ -137,8 +131,10 @@ export default function ListingDetailScreen() {
                         <Image
                             source={{ uri: listing.imageUrl }}
                             style={{
-                                width: "100%",
-                                height: "100%",
+                                width: "95%",
+                                height: "95%",
+                                alignSelf: "center",
+                                borderRadius: 12,
                             }}
                             transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
                             cachePolicy="memory-disk"
@@ -152,7 +148,7 @@ export default function ListingDetailScreen() {
 
                     {/* Tür rozeti — görsel üzerinde */}
                     <View
-                        className="absolute top-3 left-3 px-2.5 py-1 rounded-full"
+                        className="absolute top-3 left-6 px-2.5 py-1 rounded-full"
                         style={{ backgroundColor: isSale ? "rgba(255,255,255,0.92)" : colors.primary.DEFAULT }}
                     >
                         <Text className={`text-[11px] font-bold ${isSale ? "text-[#191970]" : "text-white"}`}>

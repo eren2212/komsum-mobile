@@ -46,4 +46,12 @@ export const uploadApi = {
         headers: { "Content-Type": "multipart/form-data" },
       })
       .then((res) => unwrap(res.data)),
+
+  /** POST /api/upload/event-image – Etkinlik kapak fotoğrafı yükle, public URL döner */
+  uploadEventImage: (uri: string): Promise<string> =>
+    apiClient
+      .post<RootEntity<string>>("/api/upload/event-image", buildFormData(uri), {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((res) => unwrap(res.data)),
 };

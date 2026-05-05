@@ -5,6 +5,7 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  ScrollView,
   StatusBar,
   Text,
   TouchableOpacity,
@@ -16,11 +17,35 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 
-import { postApi, DtoPost } from "@/api/post";
+import { postApi, DtoPost, PostType } from "@/api/post";
+import { eventApi, DtoEvent } from "@/api/event";
 import { userApi } from "@/api/user";
 import { colors } from "@/theme/color";
 import { useLike } from "@/hooks/useLike";
-import { SkeletonBox } from "@/components";
+import { EventCard, EventCardSkeleton, SkeletonBox } from "@/components";
+
+// ─── Filtre Tipleri ───────────────────────────────────────────────────────────
+
+type FilterKey = "ALL" | "SPONSORED" | "HELP_REQUEST" | "EVENT";
+
+interface FilterOption {
+  key: FilterKey;
+  label: string;
+  icon: string;
+}
+
+const FILTERS: FilterOption[] = [
+  { key: "ALL", label: "Hepsi", icon: "home" },
+  { key: "SPONSORED", label: "Esnaf", icon: "storefront" },
+  { key: "HELP_REQUEST", label: "Eşya Ödünç", icon: "hand-right" },
+  { key: "EVENT", label: "Etkinlik", icon: "calendar" },
+];
+
+// ─── FeedItem Union ───────────────────────────────────────────────────────────
+
+type FeedItem =
+  | { kind: "post"; item: DtoPost }
+  | { kind: "event"; item: DtoEvent };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -52,7 +77,6 @@ interface LikeButtonProps {
 }
 
 function LikeButton({ isLiked, likeCount, onPress }: LikeButtonProps) {
-  // Küçük kalp "bounce" animasyonu
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePress = () => {
@@ -131,7 +155,6 @@ function PostCard({ post }: PostCardProps) {
     });
   };
 
-  // ── Sponsored kartı ────────────────────────────────────────────────────────
   if (isSponsored) {
     return (
       <TouchableOpacity activeOpacity={0.95} onPress={navigateToDetail}>
@@ -148,7 +171,6 @@ function PostCard({ post }: PostCardProps) {
             elevation: 4,
           }}
         >
-          {/* Sponsorlu header banner */}
           <View className="bg-primary px-4 py-2 flex-row items-center justify-between">
             <View className="flex-row items-center gap-1.5">
               <Ionicons name="storefront" size={14} color="#fff" />
@@ -164,19 +186,14 @@ function PostCard({ post }: PostCardProps) {
           </View>
 
           <View className="p-4">
-            {/* Author row */}
             <View className="flex-row items-start mb-3">
               <View className="w-[44px] h-[44px] rounded-full bg-primary items-center justify-center overflow-hidden">
                 {post.authorAvatarUrl ? (
                   <Image
                     source={{ uri: post.authorAvatarUrl }}
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 22,
-                    }}
+                    style={{ width: 44, height: 44, borderRadius: 22 }}
                     contentFit="cover"
-                    transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                    transition={300}
                     cachePolicy="memory-disk"
                   />
                 ) : (
@@ -195,31 +212,20 @@ function PostCard({ post }: PostCardProps) {
               </View>
             </View>
 
-            {/* Content */}
-            <Text
-              className="text-[14px] text-neutral-600 leading-[22px] mb-3"
-              numberOfLines={6}
-            >
+            <Text className="text-[14px] text-neutral-600 leading-[22px] mb-3" numberOfLines={6}>
               {post.content}
             </Text>
 
-            {/* Image */}
             {post.imageUrl ? (
               <Image
                 source={{ uri: post.imageUrl }}
-                style={{
-                  width: "100%",
-                  aspectRatio: 16 / 9,
-                  borderRadius: 12,
-                  marginBottom: 12,
-                }}
+                style={{ width: "100%", aspectRatio: 16 / 9, borderRadius: 12, marginBottom: 12 }}
                 contentFit="cover"
-                transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                transition={300}
                 cachePolicy="memory-disk"
               />
             ) : null}
 
-            {/* CTA */}
             <TouchableOpacity
               activeOpacity={0.85}
               className="bg-primary rounded-[12px] py-[11px] items-center mb-3"
@@ -239,7 +245,6 @@ function PostCard({ post }: PostCardProps) {
               </View>
             </TouchableOpacity>
 
-            {/* Interaction bar */}
             <View className="flex-row items-center pt-2.5 border-t border-[#FFE8E0] gap-4">
               <LikeButton isLiked={isLiked} likeCount={likeCount} onPress={toggle} />
               <TouchableOpacity
@@ -259,11 +264,9 @@ function PostCard({ post }: PostCardProps) {
     );
   }
 
-  // ── Normal / Yardım kartı ─────────────────────────────────────────────────
   return (
     <TouchableOpacity activeOpacity={0.95} onPress={navigateToDetail}>
       <View className="bg-white rounded-[20px] p-4 mx-4 mb-3 overflow-hidden shadow-card">
-        {/* Card header */}
         <View className="flex-row items-start mb-3">
           <View
             className="w-[46px] h-[46px] rounded-full items-center justify-center overflow-hidden"
@@ -274,12 +277,8 @@ function PostCard({ post }: PostCardProps) {
             ) : post.authorAvatarUrl ? (
               <Image
                 source={{ uri: post.authorAvatarUrl }}
-                style={{
-                  width: 46,
-                  height: 46,
-                  borderRadius: 23,
-                }}
-                transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                style={{ width: 46, height: 46, borderRadius: 23 }}
+                transition={300}
                 cachePolicy="memory-disk"
                 contentFit="cover"
               />
@@ -297,9 +296,7 @@ function PostCard({ post }: PostCardProps) {
               </Text>
               {isHelp && (
                 <View className="bg-[#FEF3C7] px-2 py-0.5 rounded-full">
-                  <Text className="text-[10px] font-bold text-[#B45309]">
-                    YARDIM
-                  </Text>
+                  <Text className="text-[10px] font-bold text-[#B45309]">YARDIM</Text>
                 </View>
               )}
             </View>
@@ -309,31 +306,20 @@ function PostCard({ post }: PostCardProps) {
           </View>
         </View>
 
-        {/* Content */}
-        <Text
-          className="text-[14px] text-neutral-600 leading-[22px] mb-3"
-          numberOfLines={6}
-        >
+        <Text className="text-[14px] text-neutral-600 leading-[22px] mb-3" numberOfLines={6}>
           {post.content}
         </Text>
 
-        {/* Image */}
         {post.imageUrl ? (
           <Image
             source={{ uri: post.imageUrl }}
-            style={{
-              width: "100%",
-              aspectRatio: 16 / 9,
-              borderRadius: 12,
-              marginBottom: 12,
-            }}
-            transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+            style={{ width: "100%", aspectRatio: 16 / 9, borderRadius: 12, marginBottom: 12 }}
+            transition={300}
             cachePolicy="memory-disk"
             contentFit="cover"
           />
         ) : null}
 
-        {/* Interaction bar */}
         <View className="flex-row items-center justify-between pt-2.5 border-t border-surface">
           <View className="flex-row items-center gap-4">
             <LikeButton isLiked={isLiked} likeCount={likeCount} onPress={toggle} />
@@ -380,30 +366,103 @@ function HeaderUserSkeleton() {
   );
 }
 
+// ─── FilterChip ───────────────────────────────────────────────────────────────
+
+interface FilterChipProps {
+  option: FilterOption;
+  active: boolean;
+  onPress: () => void;
+}
+
+function FilterChip({ option, active, onPress }: FilterChipProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePress = () => {
+    Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 0.92, duration: 80, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, bounciness: 8 }),
+    ]).start();
+    onPress();
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={handlePress}
+        className="flex-row items-center gap-1.5 mr-2 px-4 py-2 rounded-full"
+        style={
+          active
+            ? {
+              backgroundColor: colors.primary.DEFAULT,
+              shadowColor: colors.primary.DEFAULT,
+              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.35,
+              shadowRadius: 6,
+              elevation: 4,
+            }
+            : {
+              backgroundColor: "#fff",
+              borderWidth: 1.5,
+              borderColor: "#E8EAF0",
+            }
+        }
+      >
+        <Ionicons
+          name={option.icon as any}
+          size={14}
+          color={active ? "#fff" : "#A0A5BA"}
+        />
+        <Text
+          className="text-[13px] font-semibold"
+          style={{ color: active ? "#fff" : "#646982" }}
+        >
+          {option.label}
+        </Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 // ─── EmptyState ───────────────────────────────────────────────────────────────
 
-function EmptyState() {
+function EmptyState({ isEvent }: { isEvent?: boolean }) {
   return (
     <View className="items-center justify-center pt-[60px] px-10">
       <View className="w-[84px] h-[84px] rounded-full bg-primary-50 items-center justify-center mb-5">
-        <Ionicons name="home-outline" size={40} color={colors.primary.DEFAULT} />
+        <Ionicons
+          name={isEvent ? "calendar-outline" : "home-outline"}
+          size={40}
+          color={colors.primary.DEFAULT}
+        />
       </View>
       <Text className="text-[18px] font-bold text-[#181c2e] mb-2.5 text-center">
-        Mahallenden Haber Yok
+        {isEvent ? "Yakında Etkinlik Yok" : "Mahallenden Haber Yok"}
       </Text>
       <Text className="text-[14px] text-neutral-300 text-center leading-[21px]">
-        Henüz paylaşım yok. Bir şeyler yaz ve mahalleliyi haberdar et!
+        {isEvent
+          ? "İlçende henüz aktif etkinlik bulunmuyor. Yakında bir şeyler planlanıyor olabilir!"
+          : "Henüz paylaşım yok. Bir şeyler yaz ve mahalleliyi haberdar et!"}
       </Text>
     </View>
   );
 }
 
-function SkeletonList() {
+function SkeletonList({ isEvent }: { isEvent?: boolean }) {
+  if (isEvent) {
+    return (
+      <View style={{ flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 12, gap: 8, paddingTop: 4 }}>
+        {[1, 2, 3, 4].map((k) => (
+          <View key={k} style={{ flex: 1, minWidth: "45%" }}>
+            <EventCardSkeleton />
+          </View>
+        ))}
+      </View>
+    );
+  }
   return (
     <View>
-      {[1, 2, 3].map((k) => (
-        <PostCardSkeleton key={k} />
-      ))}
+      {[1, 2, 3].map((k) => <PostCardSkeleton key={k} />)}
     </View>
   );
 }
@@ -411,166 +470,237 @@ function SkeletonList() {
 // ─── HomeScreen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const [activeFilter, setActiveFilter] = useState<FilterKey>("ALL");
+  const isEventMode = activeFilter === "EVENT";
+
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["me", "profile", "myProfile"],
     queryFn: () => userApi.getMyProfile(),
     staleTime: 5 * 60 * 1000,
   });
 
-  const {
-    data,
-    isLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-    refetch,
-    isRefetching,
-  } = useInfiniteQuery({
-    queryKey: ["neighborhoodFeed"],
-    queryFn: ({ pageParam }) => postApi.getFeed(pageParam as number, 10),
+  // ── Posts query (tip filtreliyle) ─────────────────────────────────────────
+  const postType: PostType | undefined =
+    activeFilter === "SPONSORED" ? "SPONSORED" :
+      activeFilter === "HELP_REQUEST" ? "HELP_REQUEST" :
+        activeFilter === "ALL" ? undefined :
+          undefined;
+
+  const postsQuery = useInfiniteQuery({
+    queryKey: ["neighborhoodFeed", activeFilter],
+    queryFn: ({ pageParam }) => postApi.getFeed(pageParam as number, 10, postType),
     initialPageParam: 0,
-    getNextPageParam: (lastPage) =>
-      lastPage.last ? undefined : lastPage.number + 1,
+    getNextPageParam: (lastPage) => (lastPage.last ? undefined : lastPage.number + 1),
+    enabled: !isEventMode,
+    staleTime: 3 * 60 * 1000, // 3 dk boyunca fresh — chip değişiminde yeniden fetch yok
   });
 
-  const posts = useMemo(
-    () => data?.pages.flatMap((p) => p.content) ?? [],
-    [data]
-  );
+  // ── Events query ──────────────────────────────────────────────────────────
+  const eventsQuery = useInfiniteQuery({
+    queryKey: ["districtEvents"],
+    queryFn: ({ pageParam }) => eventApi.getDistrictEvents(pageParam as number, 10),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => (lastPage.last ? undefined : lastPage.number + 1),
+    enabled: isEventMode,
+    staleTime: 3 * 60 * 1000, // 3 dk boyunca fresh — tekrar Etkinlik'e gelinince yeniden fetch yok
+  });
+
+  // ── Feed items (birleşik union type) ───────────────────────────────────────
+  const feedItems = useMemo<FeedItem[]>(() => {
+    if (isEventMode) {
+      return (eventsQuery.data?.pages.flatMap((p) => p.content) ?? []).map(
+        (e) => ({ kind: "event", item: e })
+      );
+    }
+    return (postsQuery.data?.pages.flatMap((p) => p.content) ?? []).map(
+      (p) => ({ kind: "post", item: p })
+    );
+  }, [isEventMode, eventsQuery.data, postsQuery.data]);
+
+  const isLoading = isEventMode ? eventsQuery.isLoading : postsQuery.isLoading;
+  const isFetchingNext = isEventMode ? eventsQuery.isFetchingNextPage : postsQuery.isFetchingNextPage;
+  const hasNextPage = isEventMode ? eventsQuery.hasNextPage : postsQuery.hasNextPage;
+  const fetchNextPage = isEventMode ? eventsQuery.fetchNextPage : postsQuery.fetchNextPage;
+  const refetch = isEventMode ? eventsQuery.refetch : postsQuery.refetch;
+  const isRefetching = isEventMode ? eventsQuery.isRefetching : postsQuery.isRefetching;
 
   const handleEndReached = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+    if (hasNextPage && !isFetchingNext) fetchNextPage();
+  }, [hasNextPage, isFetchingNext, fetchNextPage]);
 
-  const renderItem = useCallback(
-    ({ item }: { item: DtoPost }) => <PostCard post={item} />,
+  const renderItem = useCallback(({ item }: { item: FeedItem }) => {
+    if (item.kind === "event") return <EventCard event={item.item} compact />;
+    return <PostCard post={item.item} />;
+  }, []);
+
+  const keyExtractor = useCallback(
+    (item: FeedItem) =>
+      item.kind === "event" ? `event-${item.item.id}` : `post-${item.item.id}`,
     []
   );
-  const keyExtractor = useCallback((item: DtoPost) => String(item.id), []);
 
   const ListHeader = useMemo(
     () => (
-      <View
-        className="bg-secondary px-6 pt-4 pb-7 rounded-bl-[32px] rounded-br-[32px] mb-4"
-        style={{
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-          elevation: 8,
-        }}
-      >
-        <View className="flex-row items-center justify-between mb-5">
-          <Text className="text-[26px] font-bold text-white tracking-[0.3px]">
-            Mahallem
-          </Text>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            className="w-10 h-10 rounded-full bg-white/[0.12] items-center justify-center"
-          >
-            <Ionicons name="notifications-outline" size={22} color="#fff" />
-          </TouchableOpacity>
+      <View>
+        {/* ── Koyu başlık kartı ─────────────────────────────────────────── */}
+        <View
+          className="bg-secondary px-6 pt-4 pb-6 rounded-bl-[32px] rounded-br-[32px]"
+          style={{
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.15,
+            shadowRadius: 12,
+            elevation: 8,
+          }}
+        >
+          <View className="flex-row items-center justify-between mb-5">
+            <Text className="text-[26px] font-bold text-white tracking-[0.3px]">
+              Mahallem
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              className="w-10 h-10 rounded-full bg-white/[0.12] items-center justify-center"
+            >
+              <Ionicons name="notifications-outline" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          {profileLoading ? (
+            <HeaderUserSkeleton />
+          ) : (
+            <View className="flex-row items-center">
+              <View className="w-[46px] h-[46px] rounded-full bg-white/[0.15] items-center justify-center overflow-hidden">
+                {profile?.avatarUrl ? (
+                  <Image
+                    source={{ uri: profile.avatarUrl }}
+                    style={{ width: 46, height: 46, borderRadius: 23 }}
+                    transition={300}
+                    cachePolicy="memory-disk"
+                    contentFit="cover"
+                  />
+                ) : (
+                  <Ionicons name="person" size={22} color="#fff" />
+                )}
+              </View>
+
+              <View className="flex-1 ml-3">
+                <Text className="text-[12px] font-bold text-primary tracking-[0.5px] mb-0.5">
+                  {profile?.firstname?.toUpperCase()} {profile?.lastname?.toUpperCase()}
+                </Text>
+                <Text className="text-[14px] text-[#676767]">
+                  Merhaba, Günaydın komşu 😊
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {profile?.neighborhood ? (
+            <View className="flex-row items-center self-start mt-3 px-2.5 py-1 rounded-full bg-primary/[0.15] gap-1">
+              <Ionicons name="location-sharp" size={12} color={colors.primary.DEFAULT} />
+              <Text className="text-[11px] text-primary font-semibold">
+                {profile.neighborhood.name}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
-        {profileLoading ? (
-          <HeaderUserSkeleton />
-        ) : (
-          <View className="flex-row items-center">
-            <View className="w-[46px] h-[46px] rounded-full bg-white/[0.15] items-center justify-center overflow-hidden">
-              {profile?.avatarUrl ? (
-                <Image
-                  source={{ uri: profile.avatarUrl }}
-                  style={{
-                    width: 46,
-                    height: 46,
-                    borderRadius: 23,
-                  }}
-                  transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
-                  cachePolicy="memory-disk"
-                  contentFit="cover"
-                />
-              ) : (
-                <Ionicons name="person" size={22} color="#fff" />
-              )}
-            </View>
+        {/* ── Filtre Chipleri ──────────────────────────────────────────────── */}
+        <View
+          className="bg-surface"
+          style={{
+            paddingTop: 14,
+            paddingBottom: 10,
+            borderBottomWidth: 1,
+            borderBottomColor: "#E8EAF0",
+          }}
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16 }}
+          >
+            {FILTERS.map((f) => (
+              <FilterChip
+                key={f.key}
+                option={f}
+                active={activeFilter === f.key}
+                onPress={() => setActiveFilter(f.key)}
+              />
+            ))}
+          </ScrollView>
+        </View>
 
-            <View className="flex-1 ml-3">
-              <Text className="text-[12px] font-bold text-primary tracking-[0.5px] mb-0.5">
-                {profile?.firstname?.toUpperCase()}{" "}
-                {profile?.lastname?.toUpperCase()}
-              </Text>
-              <Text className="text-[14px] text-[#676767]">
-                Merhaba, Günaydın komşu 😊
+        {/* Etkinlik modu açıklaması + Etkinlik Ekle butonu */}
+        {isEventMode && (
+          <View className="flex-row items-center gap-2 mx-4 mt-3 mb-4">
+            <View className="flex-row items-center gap-2 flex-1 px-3 py-2.5 rounded-[12px] bg-[#CCFBF1]">
+              <Ionicons name="map-outline" size={15} color="#0D9488" />
+              <Text className="text-[12px] font-semibold text-[#0D9488] flex-1">
+                {profile?.neighborhood
+                  ? `${profile.neighborhood.name} ve çevre etkinlikleri`
+                  : "İlçendeki yaklaşan etkinlikler"}
               </Text>
             </View>
-
-            {/* <TouchableOpacity
-              activeOpacity={0.8}
-              className="px-[14px] py-2 rounded-[10px] border border-[#98a8b8]"
-              style={{
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.2,
-                shadowRadius: 4,
-                elevation: 2,
-              }}
+            <TouchableOpacity
+              onPress={() => router.push("/event/create")}
+              activeOpacity={0.85}
+              className="flex-row items-center gap-1.5 px-3 py-2.5 rounded-[12px]"
+              style={{ backgroundColor: colors.primary.DEFAULT }}
             >
-              <Text className="text-[16px] font-bold text-error tracking-[1px]">
-                SOS
-              </Text>
-            </TouchableOpacity> */}
+              <Ionicons name="add" size={16} color="#fff" />
+              <Text className="text-[12px] font-bold text-white">Ekle</Text>
+            </TouchableOpacity>
           </View>
         )}
-
-        {profile?.neighborhood ? (
-          <View className="flex-row items-center self-start mt-3 px-2.5 py-1 rounded-full bg-primary/[0.15] gap-1">
-            <Ionicons name="location-sharp" size={12} color={colors.primary.DEFAULT} />
-            <Text className="text-[11px] text-primary font-semibold">
-              {profile.neighborhood.name}
-            </Text>
-          </View>
-        ) : null}
       </View>
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [profile, profileLoading]
+    [profile, profileLoading, activeFilter, isEventMode, router]
   );
 
   const ListFooter = useMemo(() => {
-    if (!isFetchingNextPage) return <View className="h-8" />;
+    if (!isFetchingNext) return <View className="h-8" />;
     return (
       <View className="py-5 items-center">
         <ActivityIndicator size="small" color={colors.primary.DEFAULT} />
       </View>
     );
-  }, [isFetchingNextPage]);
+  }, [isFetchingNext]);
 
   const ListEmpty = useMemo(
-    () => (isLoading ? <SkeletonList /> : <EmptyState />),
-    [isLoading]
+    () =>
+      isLoading ? (
+        <SkeletonList isEvent={isEventMode} />
+      ) : (
+        <EmptyState isEvent={isEventMode} />
+      ),
+    [isLoading, isEventMode]
   );
 
   return (
-    // 1. En dıştaki SafeAreaView'un rengini başlığınla aynı yapıyoruz (bg-secondary)
     <SafeAreaView className="flex-1 bg-secondary" edges={["top"]}>
       <StatusBar
-        backgroundColor={colors.secondary.DEFAULT} // Android için
-        barStyle="light-content"  // iOS ve Android'de saat/şarj yazısını beyaz yapar
+        backgroundColor={colors.secondary.DEFAULT}
+        barStyle="light-content"
         animated={true}
       />
 
-      {/* 2. Listenin ve geri kalan sayfanın rengini koruması için FlatList'i bg-surface olan bir View içine alıyoruz */}
       <View className="flex-1 bg-surface">
         <FlatList
-          data={posts}
+          key={isEventMode ? "event-grid" : "post-list"}
+          data={feedItems}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
+          numColumns={isEventMode ? 2 : 1}
+          columnWrapperStyle={isEventMode ? { paddingHorizontal: 16, gap: 8 } : undefined}
           ListHeaderComponent={ListHeader as any}
           ListEmptyComponent={ListEmpty as any}
           ListFooterComponent={ListFooter as any}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
           showsVerticalScrollIndicator={false}
+
           refreshControl={
             <RefreshControl
               refreshing={isRefetching && !isLoading}

@@ -48,11 +48,11 @@ export default function TabsLayout() {
             />
 
             <Tabs.Screen
-                name="esnaf"
+                name="messages"
                 options={{
-                    title: 'Esnaf',
+                    title: 'Mesajlar',
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "storefront" : "storefront-outline"} color={color} size={24} />
+                        <Ionicons name={focused ? "chatbox" : "chatbox-outline"} color={color} size={24} />
                     )
                 }}
             />

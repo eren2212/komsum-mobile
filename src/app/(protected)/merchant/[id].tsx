@@ -6,7 +6,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { merchantApi } from "@/api/merchant";
 import { colors } from "@/theme/color";
-import { SkeletonBox } from "@/components";
+import { BackButton, SkeletonBox } from "@/components";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -73,13 +73,7 @@ export default function MerchantDetailScreen() {
   if (error || !merchant) {
     return (
       <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-          className="m-4 w-11 h-11 rounded-full bg-slate-50 items-center justify-center"
-        >
-          <Ionicons name="chevron-back" size={22} color="#121223" />
-        </TouchableOpacity>
+        <BackButton style={{ margin: 16 }} />
         <View className="flex-1 items-center justify-center px-8">
           <Ionicons name="storefront-outline" size={48} color="#CBD5E1" />
           <Text className="text-base font-bold text-[#121223] mt-4 mb-2">
@@ -106,13 +100,7 @@ export default function MerchantDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-[100px]">
         {/* ── Üst navigasyon ── */}
         <View className="flex-row items-center px-4 py-3">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-            className="w-11 h-11 rounded-full bg-slate-50 items-center justify-center"
-          >
-            <Ionicons name="chevron-back" size={22} color="#121223" />
-          </TouchableOpacity>
+          <BackButton />
         </View>
 
         {/* ── Profil Başlığı ── */}

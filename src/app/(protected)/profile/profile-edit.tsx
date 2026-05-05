@@ -261,7 +261,7 @@ export default function ProfileEditScreen() {
       >
         {/* ── Header ── */}
         <View className="flex-row items-center justify-between px-6 pt-4 pb-6">
-          <BackButton light={false} />
+          <BackButton />
 
           <Text className="text-neutral-600 text-[17px] font-bold">
             Profili Düzenle

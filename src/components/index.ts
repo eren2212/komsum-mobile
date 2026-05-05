@@ -9,3 +9,5 @@ export type { BackButtonProps } from "./BackButton";
 
 export { SkeletonBox } from "./SkeletonBox";
 export type { SkeletonBoxProps } from "./SkeletonBox";
+
+export { EventCard, EventCardSkeleton } from "./EventCard";

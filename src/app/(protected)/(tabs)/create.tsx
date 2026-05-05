@@ -305,6 +305,28 @@ export default function CreateScreen() {
             />
           </View>
 
+          {/* ── Etkinlik kısa yolu ── */}
+          <TouchableOpacity
+            onPress={() => router.push("/event/create")}
+            activeOpacity={0.85}
+            className="flex-row items-center gap-3 px-4 py-3.5 rounded-2xl border border-[#E8EAF0] mb-5"
+            style={{ backgroundColor: "#F5F6FA" }}
+          >
+            <View
+              className="w-10 h-10 rounded-xl items-center justify-center"
+              style={{ backgroundColor: "#FFF1EE" }}
+            >
+              <Ionicons name="calendar" size={20} color={colors.primary.DEFAULT} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-[14px] font-bold text-[#32343E]">Etkinlik Oluştur</Text>
+              <Text className="text-[12px] text-[#A0A5BA] mt-0.5">
+                Mahallende bir etkinlik düzenle
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#A0A5BA" />
+          </TouchableOpacity>
+
           {/* ── Esnaf bilgi notu ── */}
           {mode === "ESNAF" && merchant && (
             <View className="flex-row items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-[#FFF1EE]">

@@ -4,7 +4,6 @@ import {
   Platform,
   ScrollView,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,7 +13,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { userApi, DtoUserPassword } from "@/api/user";
 import { colors } from "@/theme/color";
-import { CustomButton, CustomInput } from "@/components";
+import { BackButton, CustomButton, CustomInput } from "@/components";
 
 // ─── Şifre gücü ──────────────────────────────────────────────────────────────
 
@@ -89,13 +88,7 @@ export default function ProfilePasswordScreen() {
         <View className="px-6 pt-4 pb-10">
           {/* Nav row */}
           <View className="flex-row items-center justify-between mb-8">
-            <TouchableOpacity
-              onPress={() => router.back()}
-              activeOpacity={0.8}
-              className="w-[45px] h-[45px] rounded-[22px] bg-[rgba(255,255,255,0.12)] items-center justify-center"
-            >
-              <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
+            <BackButton variant="ghost" />
 
             <Text className="text-white text-[17px] font-bold">Şifre Değiştir</Text>
 

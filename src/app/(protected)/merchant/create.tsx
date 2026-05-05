@@ -17,7 +17,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { merchantApi, DtoCreateMerchant } from "@/api/merchant";
 import { colors } from "@/theme/color";
-import { CustomInput, CustomButton } from "@/components";
+import { BackButton, CustomInput, CustomButton } from "@/components";
 
 // ─── Sabit değerler ──────────────────────────────────────────────────────────
 
@@ -315,13 +315,7 @@ export default function MerchantCreateScreen() {
       {/* ── Navigasyon Çubuğu ── */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-[#F1F5F9]">
         {/* Geri butonu */}
-        <TouchableOpacity
-          onPress={handleBack}
-          activeOpacity={0.7}
-          className="w-[44px] h-[44px] rounded-full bg-[#F8FAFC] border border-[#F1F5F9] items-center justify-center"
-        >
-          <Ionicons name="chevron-back" size={20} color="#0F172A" />
-        </TouchableOpacity>
+        <BackButton onPress={handleBack} />
 
         {/* Başlık ve adım */}
         <View className="items-center">

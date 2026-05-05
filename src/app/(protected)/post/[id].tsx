@@ -29,7 +29,7 @@ import { DtoPost } from "@/api/post";
 import { userApi } from "@/api/user";
 import { colors } from "@/theme/color";
 import { useLike } from "@/hooks/useLike";
-import { SkeletonBox } from "@/components";
+import { BackButton, SkeletonBox } from "@/components";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -613,13 +613,7 @@ export default function PostDetailScreen() {
           style={{ zIndex: 10 }}
         >
           {/* Geri butonu */}
-          <TouchableOpacity
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-            className="w-11 h-11 bg-[#f8fafc] border border-[#f1f5f9] rounded-[24px] items-center justify-center"
-          >
-            <Ionicons name="chevron-back" size={20} color="#121223" />
-          </TouchableOpacity>
+          <BackButton />
 
           {/* Başlık */}
           <Text className="text-[18px] font-bold text-[#121223] tracking-[-0.4px]">
