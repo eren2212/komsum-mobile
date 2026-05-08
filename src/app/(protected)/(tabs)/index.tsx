@@ -20,6 +20,7 @@ import { Image } from "expo-image";
 import { postApi, DtoPost, PostType } from "@/api/post";
 import { eventApi, DtoEvent } from "@/api/event";
 import { userApi } from "@/api/user";
+import { chatApi } from "@/api/chat";
 import { colors } from "@/theme/color";
 import { useLike } from "@/hooks/useLike";
 import { EventCard, EventCardSkeleton, SkeletonBox } from "@/components";
@@ -140,9 +141,10 @@ function PostCardSkeleton() {
 
 interface PostCardProps {
   post: DtoPost;
+  onAuthorPress?: (authorId: number) => void;
 }
 
-function PostCard({ post }: PostCardProps) {
+function PostCard({ post, onAuthorPress }: PostCardProps) {
   const { isLiked, likeCount, toggle } = useLike(post.id, post.likedByMe, post.likeCount);
   const router = useRouter();
   const isSponsored = post.type === "SPONSORED";
@@ -268,7 +270,11 @@ function PostCard({ post }: PostCardProps) {
     <TouchableOpacity activeOpacity={0.95} onPress={navigateToDetail}>
       <View className="bg-white rounded-[20px] p-4 mx-4 mb-3 overflow-hidden shadow-card">
         <View className="flex-row items-start mb-3">
-          <View
+          <TouchableOpacity
+            activeOpacity={post.authorId && onAuthorPress ? 0.7 : 1}
+            onPress={() => {
+              if (post.authorId && onAuthorPress) onAuthorPress(post.authorId);
+            }}
             className="w-[46px] h-[46px] rounded-full items-center justify-center overflow-hidden"
             style={{ backgroundColor: isHelp ? "#FEF3C7" : "#121223" }}
           >
@@ -287,7 +293,7 @@ function PostCard({ post }: PostCardProps) {
                 {getInitials(post.authorFirstName, post.authorLastName)}
               </Text>
             )}
-          </View>
+          </TouchableOpacity>
 
           <View className="flex-1 ml-3">
             <View className="flex-row items-center gap-2">
@@ -529,10 +535,34 @@ export default function HomeScreen() {
     if (hasNextPage && !isFetchingNext) fetchNextPage();
   }, [hasNextPage, isFetchingNext, fetchNextPage]);
 
-  const renderItem = useCallback(({ item }: { item: FeedItem }) => {
-    if (item.kind === "event") return <EventCard event={item.item} compact />;
-    return <PostCard post={item.item} />;
-  }, []);
+  const handleAuthorPress = useCallback(
+    async (authorId: number) => {
+      if (authorId === profile?.id) return; // Kendine mesaj atılamaz
+      try {
+        const room = await chatApi.startChat(authorId);
+        router.push({
+          pathname: "/(protected)/chat/[roomId]",
+          params: {
+            roomId: String(room.id),
+            otherUserFirstName: room.otherUserFirstName,
+            otherUserLastName: room.otherUserLastName,
+            otherUserAvatarUrl: room.otherUserAvatarUrl ?? "",
+          },
+        });
+      } catch {
+        // Sessizce geç — hata durumunda kullanıcı mesajlar sekmesine gidebilir
+      }
+    },
+    [profile?.id, router]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: FeedItem }) => {
+      if (item.kind === "event") return <EventCard event={item.item} compact />;
+      return <PostCard post={item.item} onAuthorPress={handleAuthorPress} />;
+    },
+    [handleAuthorPress]
+  );
 
   const keyExtractor = useCallback(
     (item: FeedItem) =>

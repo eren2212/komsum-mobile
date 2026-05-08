@@ -27,7 +27,7 @@ import { SkeletonBox } from "@/components";
 
 // ─── Mod tipi ────────────────────────────────────────────────────────────────
 
-type PostMode = "NORMAL" | "ESNAF";
+type PostMode = "NORMAL" | "YARDIM" | "ESNAF";
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
@@ -64,7 +64,7 @@ function CreateSkeleton() {
 // ─── Mode Card ───────────────────────────────────────────────────────────────
 
 interface ModeCardProps {
-  icon: "person" | "storefront";
+  icon: "person" | "storefront" | "hand-left";
   title: string;
   subtitle?: string;
   selected: boolean;
@@ -203,7 +203,10 @@ export default function CreateScreen() {
   const onShare = async () => {
     if (!content.trim()) return;
 
-    const type: PostType = mode === "ESNAF" ? "SPONSORED" : "STANDARD";
+    const type: PostType =
+      mode === "ESNAF" ? "SPONSORED" :
+      mode === "YARDIM" ? "HELP_REQUEST" :
+      "STANDARD";
     let uploadedImageUrl: string | undefined;
 
     if (imageUri) {
@@ -230,6 +233,8 @@ export default function CreateScreen() {
   const placeholder =
     mode === "ESNAF"
       ? `${merchant?.shopName ?? "Dükkanınız"} hakkında bir şeyler paylaşın...`
+      : mode === "YARDIM"
+      ? "Komşulardan ne tür yardım istiyorsunuz? Kısa ve net anlatın..."
       : "Mahallede ne oluyor? Bir takış, bir duyuru veya bir hizmet mi var?...";
 
   // ── Avatar ──
@@ -285,12 +290,19 @@ export default function CreateScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* ── Mod seçici ── */}
-          <View className="flex-row gap-3 mb-5">
+          <View className="flex-row gap-2 mb-5">
             <ModeCard
               icon="person"
               title="Normal Kullanıcı"
               selected={mode === "NORMAL"}
               onPress={() => setMode("NORMAL")}
+            />
+            <ModeCard
+              icon="hand-left"
+              title="Yardım İsteği"
+              subtitle="Komşulardan yardım iste"
+              selected={mode === "YARDIM"}
+              onPress={() => setMode("YARDIM")}
             />
             <ModeCard
               icon="storefront"
@@ -327,7 +339,15 @@ export default function CreateScreen() {
             <Ionicons name="chevron-forward" size={18} color="#A0A5BA" />
           </TouchableOpacity>
 
-          {/* ── Esnaf bilgi notu ── */}
+          {/* ── Mod bilgi notu ── */}
+          {mode === "YARDIM" && (
+            <View className="flex-row items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-[#FFF3CD]">
+              <Ionicons name="hand-left" size={14} color="#B8860B" />
+              <Text className="text-xs font-semibold" style={{ color: "#B8860B" }}>
+                Bu gönderi komşularına yardım talebi olarak görünecek
+              </Text>
+            </View>
+          )}
           {mode === "ESNAF" && merchant && (
             <View className="flex-row items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-[#FFF1EE]">
               <Ionicons name="storefront" size={14} color={colors.primary.DEFAULT} />

@@ -34,6 +34,7 @@ export interface DtoPost {
   imageUrl?: string | null;
   type: PostType;
   shopName?: string | null;
+  authorId?: number | null;
   authorFirstName: string;
   authorLastName: string;
   authorAvatarUrl?: string | null;
