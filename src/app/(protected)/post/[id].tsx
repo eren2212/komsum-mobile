@@ -4,6 +4,7 @@ import {
   Alert,
   Animated,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -125,9 +126,10 @@ interface CommentItemProps {
   onDelete: (id: number) => void;
   onEdit: (comment: DtoComment) => void;
   isDeletingId: number | null;
+  onAuthorPress: (authorId: number) => void;
 }
 
-function CommentItem({ comment, isOwner, onDelete, onEdit, isDeletingId }: CommentItemProps) {
+function CommentItem({ comment, isOwner, onDelete, onEdit, isDeletingId, onAuthorPress }: CommentItemProps) {
   const isDeleting = isDeletingId === comment.id;
 
   return (
@@ -136,11 +138,17 @@ function CommentItem({ comment, isOwner, onDelete, onEdit, isDeletingId }: Comme
       style={{ opacity: isDeleting ? 0.4 : 1 }}
     >
       {/* Avatar */}
-      <View className="w-9 h-9 rounded-full bg-secondary items-center justify-center flex-shrink-0">
-        <Text className="text-[11px] font-bold text-white">
-          {getInitials(comment.authorFirstName, comment.authorLastName)}
-        </Text>
-      </View>
+      <TouchableOpacity
+        onPress={() => onAuthorPress(comment.authorId)}
+        activeOpacity={0.8}
+        className="flex-shrink-0"
+      >
+        <View className="w-9 h-9 rounded-full bg-secondary items-center justify-center">
+          <Text className="text-[11px] font-bold text-white">
+            {getInitials(comment.authorFirstName, comment.authorLastName)}
+          </Text>
+        </View>
+      </TouchableOpacity>
 
       {/* Bubble */}
       <View className="flex-1 bg-[#f8fafc] rounded-tr-[16px] rounded-bl-[16px] rounded-br-[16px] p-3">
@@ -317,6 +325,26 @@ export default function PostDetailScreen() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editingComment, setEditingComment] = useState<DtoComment | null>(null);
   const inputRef = useRef<TextInput>(null);
+  const keyboardHeight = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      Animated.timing(keyboardHeight, {
+        toValue: e.endCoordinates.height,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      Animated.timing(keyboardHeight, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, [keyboardHeight]);
 
   // ── Yorumları infinite yükle
   const {
@@ -429,7 +457,15 @@ export default function PostDetailScreen() {
   const PostHeader = (
     <View>
       {/* Post: author row */}
-      <View className="flex-row items-center px-4 pt-4 pb-3 gap-3">
+      <TouchableOpacity
+        className="flex-row items-center px-4 pt-4 pb-3 gap-3"
+        activeOpacity={post.authorId ? 0.7 : 1}
+        onPress={() => {
+          if (post.authorId) {
+            router.push({ pathname: "/(protected)/user/[id]", params: { id: String(post.authorId) } });
+          }
+        }}
+      >
         <View
           className="w-12 h-12 rounded-full items-center justify-center"
           style={{
@@ -449,7 +485,7 @@ export default function PostDetailScreen() {
                   height: 48,
                   borderRadius: 24,
                 }}
-                transition={300} // Yüklendiğinde 300ms'lik yumuşak bir geçiş (fade-in) yapar
+                transition={300}
                 cachePolicy="memory-disk"
                 contentFit="cover"
               />
@@ -485,7 +521,7 @@ export default function PostDetailScreen() {
             {post.neighborhoodName} • {formatDate(post.createdAt)}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {/* Sponsorlu: dükkan adı */}
       {isSponsored && post.shopName ? (
@@ -571,10 +607,13 @@ export default function PostDetailScreen() {
           onDelete={(id) => deleteComment(id)}
           onEdit={(c) => setEditingComment(c)}
           isDeletingId={deletingId}
+          onAuthorPress={(authorId) =>
+            router.push({ pathname: "/(protected)/user/[id]", params: { id: String(authorId) } })
+          }
         />
       </View>
     ),
-    [deletingId, currentUserId, deleteComment]
+    [deletingId, currentUserId, deleteComment, router]
   );
 
   const ListFooter = (
@@ -604,9 +643,14 @@ export default function PostDetailScreen() {
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
+        <Animated.View
+          style={{
+            flex: 1,
+            paddingBottom: Platform.OS === "android" ? keyboardHeight : 0,
+          }}
+        >
         {/* ── Top App Bar ── */}
         <View
           className="flex-row items-center justify-between px-4 py-3 border-b border-[#f1f5f9] bg-white"
@@ -710,6 +754,7 @@ export default function PostDetailScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

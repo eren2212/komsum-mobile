@@ -106,13 +106,36 @@ const cardShadow = Platform.select({
 
 function EventListSkeleton() {
   return (
-    <View className="bg-white rounded-[20px] p-4 mb-3 border border-[#F5F6FA]" style={cardShadow}>
-      <View className="flex-row gap-3">
-        <SkeletonBox width={52} height={52} borderRadius={14} />
-        <View className="flex-1 gap-2">
-          <SkeletonBox width={200} height={16} borderRadius={8} />
-          <SkeletonBox width={150} height={13} borderRadius={6} />
-          <SkeletonBox width={120} height={13} borderRadius={6} />
+    <View
+      className="bg-white rounded-[20px] mb-3 border border-[#F5F6FA] overflow-hidden"
+      style={cardShadow}
+    >
+      {/* Görsel banner alanı */}
+      <View style={{ height: 90, backgroundColor: "#F0F1F5" }} />
+
+      <View className="p-4">
+        {/* Üst satır: kategori ikonu + içerik + chevron */}
+        <View className="flex-row gap-3 items-start">
+          {/* Kategori ikon kutusu */}
+          <SkeletonBox width={50} height={50} borderRadius={14} />
+
+          {/* Metin alanı */}
+          <View className="flex-1 gap-[7px]">
+            <SkeletonBox width={62} height={11} borderRadius={4} />
+            <SkeletonBox width={160} height={15} borderRadius={6} />
+            <SkeletonBox width={110} height={15} borderRadius={6} />
+            <SkeletonBox width={145} height={12} borderRadius={5} />
+            <SkeletonBox width={105} height={12} borderRadius={5} />
+          </View>
+
+          {/* Chevron */}
+          <SkeletonBox width={16} height={16} borderRadius={4} style={{ marginTop: 2 }} />
+        </View>
+
+        {/* Alt bilgi satırı */}
+        <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-[#F5F6FA]">
+          <SkeletonBox width={88} height={11} borderRadius={4} />
+          <SkeletonBox width={82} height={24} borderRadius={12} />
         </View>
       </View>
     </View>

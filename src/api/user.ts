@@ -29,6 +29,7 @@ export interface DtoNeighbour {
   id: number;
   firstname: string;
   lastname: string;
+  email: string;
   bio?: string | null;
   avatarUrl?: string | null;
   neighborhood: DtoNeighborhood;

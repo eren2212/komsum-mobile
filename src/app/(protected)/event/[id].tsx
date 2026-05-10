@@ -316,7 +316,13 @@ export default function EventDetailScreen() {
           </Text>
 
           {/* Organizatör */}
-          <View className="flex-row items-center gap-3 mb-5 p-3 rounded-[14px] bg-[#F8F9FB]">
+          <TouchableOpacity
+            className="flex-row items-center gap-3 mb-5 p-3 rounded-[14px] bg-[#F8F9FB]"
+            activeOpacity={0.75}
+            onPress={() =>
+              router.push({ pathname: "/(protected)/user/[id]", params: { id: String(event.authorId) } })
+            }
+          >
             <View
               className="w-10 h-10 rounded-full items-center justify-center"
               style={{ backgroundColor: colors.secondary.DEFAULT }}
@@ -340,7 +346,7 @@ export default function EventDetailScreen() {
                 ORGANİZATÖR
               </Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
           {/* Divider */}
           <View className="h-[1px] bg-[#F0F1F5] mb-5" />

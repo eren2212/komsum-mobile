@@ -196,7 +196,16 @@ export default function ListingDetailScreen() {
                 </View>
 
                 {/* ── Satıcı Bilgisi ── */}
-                <View className="mx-5 bg-slate-50 rounded-2xl p-4 flex-row items-center mb-6">
+                <TouchableOpacity
+                    activeOpacity={0.75}
+                    onPress={() =>
+                        router.push({
+                            pathname: "/(protected)/user/[id]",
+                            params: { id: String(listing.sellerId) },
+                        })
+                    }
+                    className="mx-5 bg-slate-50 rounded-2xl p-4 flex-row items-center mb-6"
+                >
                     <View className="w-11 h-11 rounded-full bg-[#FFF1EE] items-center justify-center mr-3.5 border-2 border-[#FF6B4A]/15">
                         <Text className="text-lg font-bold" style={{ color: colors.primary.DEFAULT }}>
                             {sellerInitial}
@@ -210,8 +219,8 @@ export default function ListingDetailScreen() {
                             {listing.sellerFirstName} {listing.sellerLastName}
                         </Text>
                     </View>
-                    <Ionicons name="person-circle-outline" size={20} color="#CBD5E1" />
-                </View>
+                    <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
+                </TouchableOpacity>
 
                 {/* ── Detay Bilgileri ── */}
                 <View className="px-5 mb-6">

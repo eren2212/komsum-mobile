@@ -37,6 +37,7 @@ export interface DtoEvent {
   longitude: number;
   priceText?: string | null;
 
+  authorId: number;
   authorFirstName: string;
   authorLastName: string;
   neighborhoodName: string;

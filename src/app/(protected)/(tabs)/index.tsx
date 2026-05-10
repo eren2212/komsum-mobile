@@ -23,7 +23,7 @@ import { userApi } from "@/api/user";
 import { chatApi } from "@/api/chat";
 import { colors } from "@/theme/color";
 import { useLike } from "@/hooks/useLike";
-import { EventCard, EventCardSkeleton, SkeletonBox } from "@/components";
+import { EventCard, EventCardCompactSkeleton, SkeletonBox } from "@/components";
 
 // ─── Filtre Tipleri ───────────────────────────────────────────────────────────
 
@@ -457,10 +457,14 @@ function EmptyState({ isEvent }: { isEvent?: boolean }) {
 function SkeletonList({ isEvent }: { isEvent?: boolean }) {
   if (isEvent) {
     return (
-      <View style={{ flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 12, gap: 8, paddingTop: 4 }}>
-        {[1, 2, 3, 4].map((k) => (
-          <View key={k} style={{ flex: 1, minWidth: "45%" }}>
-            <EventCardSkeleton />
+      <View className="pt-1">
+        {[0, 1, 2].map((row) => (
+          <View
+            key={row}
+            style={{ flexDirection: "row", paddingHorizontal: 16, gap: 8 }}
+          >
+            <EventCardCompactSkeleton />
+            <EventCardCompactSkeleton />
           </View>
         ))}
       </View>

@@ -4,6 +4,7 @@ import {
   TextInput,
   TextInputProps,
   TouchableOpacity,
+  useColorScheme,
   View,
 } from "react-native";
 import AntDesign from '@expo/vector-icons/AntDesign';
@@ -93,6 +94,7 @@ const CustomInput = forwardRef<TextInput, CustomInputProps>(
   ) => {
     const [focused, setFocused] = useState(false);
     const [secure, setSecure] = useState(isPassword || secureTextEntry);
+    const isDark = useColorScheme() === "dark";
 
     const handleFocus = (e: Parameters<NonNullable<TextInputProps["onFocus"]>>[0]) => {
       setFocused(true);
@@ -124,7 +126,7 @@ const CustomInput = forwardRef<TextInput, CustomInputProps>(
             ref={ref}
             editable={!disabled}
             secureTextEntry={secure}
-            placeholderTextColor={placeholderTextColor ?? "#A0A5BA"}
+            placeholderTextColor={placeholderTextColor ?? (isDark ? "#6B7280" : "#A0A5BA")}
             className={INPUT_BASE}
             onFocus={handleFocus}
             onBlur={handleBlur}
@@ -139,9 +141,9 @@ const CustomInput = forwardRef<TextInput, CustomInputProps>(
               className="shrink-0 p-1"
             >
               {secure ? (
-                <EyeOffIcon />
+                <EyeOffIcon dark={isDark} />
               ) : (
-                <EyeIcon />
+                <EyeIcon dark={isDark} />
               )}
             </TouchableOpacity>
           ) : (
@@ -162,19 +164,18 @@ export default CustomInput;
 
 // ─── Dahili ikonlar (SVG – harici paket gerekmez) ────────────────────────────
 
-function EyeIcon() {
-  // react-native-svg yoksa View ile temsili gösterim
+function EyeIcon({ dark }: { dark?: boolean }) {
   return (
     <View className="w-5 h-5 items-center justify-center">
-      <AntDesign name="eye" size={18} color="black" />
+      <AntDesign name="eye" size={18} color={dark ? "#ffffff" : "#525252"} />
     </View>
   );
 }
 
-function EyeOffIcon() {
+function EyeOffIcon({ dark }: { dark?: boolean }) {
   return (
     <View className="w-5 h-5 items-center justify-center">
-      <AntDesign name="eye-invisible" size={18} color="black" />
+      <AntDesign name="eye-invisible" size={18} color={dark ? "#ffffff" : "#525252"} />
     </View>
   );
 }

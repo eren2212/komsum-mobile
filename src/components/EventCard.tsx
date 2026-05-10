@@ -48,59 +48,91 @@ function formatEventDate(iso: string): { dayDate: string; time: string } {
 
 const PARTICIPANT_COLORS = ["#FF6B4A", "#121223", "#0D9488", "#7C3AED", "#2563EB"];
 
-// ─── EventCard Skeleton ───────────────────────────────────────────────────────
+// ─── EventCard Skeleton (tam genişlik – detay sayfaları için) ────────────────
 export function EventCardSkeleton() {
   return (
     <View
       className="bg-white rounded-[24px] mx-4 mb-4 overflow-hidden border border-[#F2F2F7]"
       style={{
-        shadowColor: "#09090B", // Çok hafif, premium bir gölge rengi
+        shadowColor: "#09090B",
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.04,
         shadowRadius: 16,
         elevation: 2,
       }}
     >
-      {/* 1. Görsel Alanı (Event Cover) - Biraz daha yüksek tutuldu, ferah görünüm için */}
       <View className="h-[220px] w-full bg-[#F4F5F7]" />
-
-      {/* 2. İçerik Alanı */}
       <View className="p-5">
-
-        {/* Üst Bilgi (Kategori & Tarih) */}
         <View className="flex-row items-center justify-between mb-3">
           <SkeletonBox width={100} height={14} borderRadius={6} />
-          {/* Sağ üstte ufak bir badge/ikon simülasyonu */}
           <SkeletonBox width={32} height={14} borderRadius={6} />
         </View>
-
-        {/* Etkinlik Başlığı (Sabit px yerine yüzdelik kullanmak büyük ekranlarda patlamayı önler) */}
         <View className="mb-4 gap-y-2">
           <SkeletonBox width={85} height={22} borderRadius={8} />
           <SkeletonBox width={50} height={22} borderRadius={8} />
         </View>
-
-        {/* Etiketler / Lokasyon */}
         <View className="flex-row gap-x-2 mb-1">
           <SkeletonBox width={80} height={24} borderRadius={8} />
           <SkeletonBox width={60} height={24} borderRadius={8} />
         </View>
-
-        {/* Alt Kısım: Katılımcılar, Fiyat & Buton */}
         <View className="flex-row items-center justify-between mt-4 pt-4 border-t border-[#F2F2F7]">
-
           <View className="flex-row items-center gap-x-3">
-            {/* Yuvarlak Avatar Simülasyonu (Kimin düzenlediği vb.) */}
             <SkeletonBox width={32} height={32} borderRadius={16} />
             <View className="gap-y-1">
               <SkeletonBox width={60} height={12} borderRadius={4} />
               <SkeletonBox width={40} height={10} borderRadius={4} />
             </View>
           </View>
-
-          {/* Action Butonu */}
           <SkeletonBox width={96} height={38} borderRadius={18} />
+        </View>
+      </View>
+    </View>
+  );
+}
 
+// ─── EventCard Compact Skeleton (2-sütun feed grid'i için) ───────────────────
+export function EventCardCompactSkeleton() {
+  return (
+    <View
+      className="bg-white rounded-[18px] overflow-hidden flex-1 mb-3"
+      style={{
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.09,
+        shadowRadius: 10,
+        elevation: 4,
+      }}
+    >
+      {/* Görsel alanı */}
+      <View className="h-[155px] w-full bg-[#F0F1F5]" />
+
+      {/* İçerik alanı */}
+      <View className="p-[10px]">
+        {/* Kategori */}
+        <SkeletonBox width={56} height={9} borderRadius={4} />
+
+        {/* Başlık (2 satır sabit yükseklik) */}
+        <View className="mt-[5px] mb-[6px] gap-y-[4px]">
+          <SkeletonBox width={110} height={13} borderRadius={5} />
+          <SkeletonBox width={76} height={13} borderRadius={5} />
+        </View>
+
+        {/* Ücretsiz / fiyat */}
+        <SkeletonBox width={52} height={10} borderRadius={4} />
+
+        {/* Tarih / saat / konum */}
+        <View className="mt-[5px] gap-y-[5px]">
+          <SkeletonBox width={90} height={10} borderRadius={4} />
+          <SkeletonBox width={44} height={10} borderRadius={4} />
+          <SkeletonBox width={76} height={10} borderRadius={4} />
+        </View>
+
+        {/* Alt çubuk */}
+        <View className="flex-row items-center justify-between mt-[10px] h-[28px]">
+          {/* Katılımcı dairesi */}
+          <SkeletonBox width={22} height={22} borderRadius={11} />
+          {/* Katıl butonu */}
+          <SkeletonBox width={28} height={28} borderRadius={14} />
         </View>
       </View>
     </View>
