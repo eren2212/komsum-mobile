@@ -13,11 +13,10 @@ import { router } from "expo-router";
 import { BackButton, CustomButton } from "@/components";
 import { useSignupStore } from "@/store/signupStore";
 import { useAuthStore } from "@/store/authStore";
-import { DtoNeighborhood } from "@/api/neighborhood";
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-import Logo from "../../../assets/images/logo/komsum-logo-turuncu.svg"
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import Logo from "../../../assets/images/logo/komsum-logo-turuncu.svg";
 
-// ─── KOMŞUM Logosu ────────────────────────────────────────────────────────────
+// ─── Logo ────────────────────────────────────────────────────────────────────
 
 function KomsumLogo() {
   return (
@@ -81,7 +80,13 @@ function PickerModal<T>({
           </View>
         ) : error ? (
           <View className="flex-1 items-center justify-center py-12 px-6">
-            <Text className="text-error text-sm text-center">{error}</Text>
+            <Text className="text-red-500 text-sm text-center">{error}</Text>
+          </View>
+        ) : items.length === 0 ? (
+          <View className="flex-1 items-center justify-center py-12 px-6">
+            <Text className="text-neutral-400 text-sm text-center">
+              Sonuç bulunamadı
+            </Text>
           </View>
         ) : (
           <FlatList
@@ -106,22 +111,65 @@ function PickerModal<T>({
   );
 }
 
+// ─── Seçim Satırı ─────────────────────────────────────────────────────────────
+
+interface SelectRowProps {
+  label: string;
+  value: string | null;
+  placeholder: string;
+  disabled?: boolean;
+  onPress: () => void;
+}
+
+function SelectRow({ label, value, placeholder, disabled = false, onPress }: SelectRowProps) {
+  return (
+    <View className="mb-3">
+      <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1 ml-1">
+        {label}
+      </Text>
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={disabled}
+        activeOpacity={0.8}
+        className="h-[56px] rounded-2xl px-4 justify-center border"
+        style={{
+          backgroundColor: disabled ? "#F5F5F5" : "#F9F9F9",
+          borderColor: value ? "#FF6B4A" : "#E5E5E5",
+          opacity: disabled ? 0.5 : 1,
+        }}
+      >
+        <Text
+          className="text-sm"
+          style={{ color: value ? "#32343E" : "#A0A5BA" }}
+        >
+          {value ?? placeholder}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function NeighborhoodSelectScreen() {
   const {
     pending,
+    cities,
     districts,
     neighborhoods,
+    selectedCity,
     selectedDistrict,
     selectedNeighborhood,
     pickerStep,
+    citiesLoading,
     districtsLoading,
     neighborhoodsLoading,
-    neighborhoodsError,
+    citiesError,
     districtsError,
-    fetchDistricts,
+    neighborhoodsError,
+    fetchCities,
     setPickerStep,
+    selectCity,
     selectDistrict,
     selectNeighborhood,
     clearAll,
@@ -129,33 +177,24 @@ export default function NeighborhoodSelectScreen() {
 
   const { register, isLoading, error, clearError } = useAuthStore();
 
-  // Sayfa açıldığında ilçeleri yükle
+  // Sayfa açıldığında illeri yükle
   useEffect(() => {
-    if (districts.length === 0) {
-      fetchDistricts();
-    }
+    fetchCities();
   }, []);
 
-  // Sunucu hatalarını göster
+  // Sunucu kayıt hatasını göster
   useEffect(() => {
     if (error) {
       Alert.alert("Kayıt Hatası", error, [{ text: "Tamam", onPress: clearError }]);
     }
   }, [error]);
 
-  // Mahalle alanına tıklandığında ilçe listesini aç
-  const handleFieldPress = () => {
-    setPickerStep("district");
-  };
-
   const handleOnayla = async () => {
     if (!selectedNeighborhood) {
       Alert.alert("Mahalle Seçin", "Lütfen mahallenizi seçin.");
       return;
     }
-
     if (!pending) {
-      // Beklenen form verisi kaybolmuş, başa dön
       router.replace("/auth/signup");
       return;
     }
@@ -171,84 +210,98 @@ export default function NeighborhoodSelectScreen() {
     }
   };
 
-  // Seçili değerin gösterim metni
-  const displayValue = selectedNeighborhood
-    ? `${selectedNeighborhood.name} (${selectedDistrict})`
-    : selectedDistrict
-      ? "Mahalle seçin..."
-      : "İlçe seçmek için dokunun";
-
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top", "bottom"]}>
       <View className="flex-1 px-6">
-        {/* ── Geri butonu ── */}
+        {/* Geri butonu */}
         <View className="pt-4 pb-2">
           <BackButton light={false} />
         </View>
 
-        {/* ── Logo ── */}
         <View className="flex-1 items-center justify-center flex-col">
           <KomsumLogo />
-          {/* Başlık */}
+
           <Text
             className="text-neutral-600 text-[22px] text-center mt-10"
             style={{ fontFamily: "Sen_400Regular" }}
           >
-            Neredesin Komşum <FontAwesome5 name="smile-wink" size={24} color="black" />
+            Neredesin Komşum{" "}
+            <FontAwesome5 name="smile-wink" size={24} color="black" />
           </Text>
 
-          {/* Açıklama */}
           <Text className="text-neutral-400 text-base text-center mt-3 leading-[26px] opacity-85">
-            Mahalleni seç ve başla. Unutma yılda sadece 2 kez mahalle seçiliyor!
+            Mahalleni seç ve başla. Unutma yılda sadece 2 kez mahalle
+            değiştirilebiliyor!
           </Text>
 
-          {/* ── Mahalle seçim alanı ── */}
-          <View className="pb-4 mt-10 w-full">
-            <TouchableOpacity
-              onPress={handleFieldPress}
-              activeOpacity={0.8}
-              className="h-[62px] bg-neutral-50 border border-neutral-100 rounded-2xl px-4 justify-center mb-4"
-            >
-              <Text
-                className={
-                  selectedNeighborhood
-                    ? "text-neutral-600 text-sm"
-                    : "text-neutral-300 text-sm"
-                }
-              >
-                {displayValue}
-              </Text>
-            </TouchableOpacity>
-
-            {/* ONAYLA butonu */}
-            <CustomButton
-              label="ONAYLA"
-              fullWidth
-              loading={isLoading}
-              disabled={!selectedNeighborhood}
-              onPress={handleOnayla}
+          {/* ── 3 adımlı seçim ── */}
+          <View className="mt-10 w-full">
+            {/* İl */}
+            <SelectRow
+              label="İl"
+              value={selectedCity?.name ?? null}
+              placeholder="İl seçin..."
+              onPress={() => setPickerStep("city")}
             />
+
+            {/* İlçe */}
+            <SelectRow
+              label="İlçe"
+              value={selectedDistrict?.name ?? null}
+              placeholder={selectedCity ? "İlçe seçin..." : "Önce il seçin"}
+              disabled={!selectedCity}
+              onPress={() => selectedCity && setPickerStep("district")}
+            />
+
+            {/* Mahalle */}
+            <SelectRow
+              label="Mahalle"
+              value={selectedNeighborhood?.name ?? null}
+              placeholder={selectedDistrict ? "Mahalle seçin..." : "Önce ilçe seçin"}
+              disabled={!selectedDistrict}
+              onPress={() => selectedDistrict && setPickerStep("neighborhood")}
+            />
+
+            {/* Onayla */}
+            <View className="mt-4">
+              <CustomButton
+                label="ONAYLA"
+                fullWidth
+                loading={isLoading}
+                disabled={!selectedNeighborhood || isLoading}
+                onPress={handleOnayla}
+              />
+            </View>
           </View>
         </View>
-
-
-
       </View>
 
-      {/* ── İlçe seçim modalı ── */}
+      {/* ── İl Modalı ── */}
+      <PickerModal
+        visible={pickerStep === "city"}
+        title="İl Seçin"
+        items={cities}
+        loading={citiesLoading}
+        error={citiesError}
+        getLabel={(c) => c.name}
+        onSelect={(city) => selectCity(city)}
+        onClose={() => setPickerStep(null)}
+      />
+
+      {/* ── İlçe Modalı ── */}
       <PickerModal
         visible={pickerStep === "district"}
         title="İlçe Seçin"
         items={districts}
         loading={districtsLoading}
         error={districtsError}
-        getLabel={(d) => d}
+        getLabel={(d) => d.name}
         onSelect={(district) => selectDistrict(district)}
         onClose={() => setPickerStep(null)}
       />
 
-      {/* ── Mahalle seçim modalı ── */}
-      <PickerModal<DtoNeighborhood>
+      {/* ── Mahalle Modalı ── */}
+      <PickerModal
         visible={pickerStep === "neighborhood"}
         title="Mahalle Seçin"
         items={neighborhoods}

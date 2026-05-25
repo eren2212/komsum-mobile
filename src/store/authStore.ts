@@ -9,6 +9,10 @@ import {
 } from "@/api/auth";
 import { extractErrorMessage } from "@/utils/apiError";
 import { tokenStorage } from "@/utils/tokenStorage";
+import {
+  registerForPushNotificationsAsync,
+  unregisterPushNotifications,
+} from "@/lib/notifications";
 
 // ─── State tipi ───────────────────────────────────────────────────────────────
 
@@ -55,6 +59,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       const tokens = await authApi.register(payload);
       await tokenStorage.save(tokens);
       set({ tokens, isLoading: false });
+      // Push token kaydını ana akışı bloklamadan tetikle
+      registerForPushNotificationsAsync().catch(() => {});
       return true;
     } catch (err: unknown) {
       set({ error: extractErrorMessage(err), isLoading: false });
@@ -68,6 +74,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       const tokens = await authApi.login(payload);
       await tokenStorage.save(tokens);
       set({ tokens, isLoading: false });
+      // Push token kaydını ana akışı bloklamadan tetikle
+      registerForPushNotificationsAsync().catch(() => {});
       return true;
     } catch (err: unknown) {
       set({ error: extractErrorMessage(err), isLoading: false });
@@ -100,8 +108,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    tokenStorage.clear(); // fire-and-forget
-    set({ tokens: null, error: null });
+    // Token henüz geçerli iken backend'e FCM token sil isteğini gönder
+    unregisterPushNotifications().finally(() => {
+      tokenStorage.clear();
+      set({ tokens: null, error: null });
+    });
   },
 
   clearError: () => set({ error: null }),

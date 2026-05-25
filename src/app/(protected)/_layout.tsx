@@ -13,6 +13,7 @@ export default function ProtectedLayout() {
             <Stack.Screen name="(tabs)"      options={{ animation: 'fade' }} />
             <Stack.Screen name="profile"     options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="post"        options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="event"       options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="marketplace" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="chat"        options={{ animation: 'slide_from_right' }} />
         </Stack>

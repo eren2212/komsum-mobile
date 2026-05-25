@@ -330,7 +330,7 @@ export default function ChatRoomScreen() {
       {/* İçerik Alanı — açık zemin */}
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: "#F0F2F8" }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={0}
       >
         {isLoading ? (
@@ -349,6 +349,7 @@ export default function ChatRoomScreen() {
               paddingVertical: 16,
               flexGrow: 1,
             }}
+            keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View

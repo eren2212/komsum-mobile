@@ -27,7 +27,8 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.eren1247.mobile"
+      "package": "com.eren1247.mobile",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -42,7 +43,21 @@
           "cameraPermission": "Komsum, fotoğraf çekebilmek için kameraya erişmek istiyor."
         }
       ],
-      "@react-native-community/datetimepicker"
-    ]
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "color": "#FF6B4A",
+          "androidMode": "default",
+          "androidCollapsedTitle": "Komşum"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "87f0b95e-49e2-490a-9a8d-8dc550dbba2b"
+      }
+    }
   }
 }

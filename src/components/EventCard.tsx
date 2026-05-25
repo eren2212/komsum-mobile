@@ -158,7 +158,7 @@ export function EventCard({ event, compact = false }: EventCardProps) {
   const navigateToDetail = () => {
     router.push({
       pathname: "/(protected)/event/[id]",
-      params: { id: String(event.id), eventJson: encodeURIComponent(JSON.stringify(event)) },
+      params: { id: String(event.id) },
     });
   };
 

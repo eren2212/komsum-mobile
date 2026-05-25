@@ -220,22 +220,44 @@ export default function ProfileEditScreen() {
     });
   };
 
-  const onChangeAvatar = async () => {
+  const openAvatarFromGallery = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert("İzin Gerekli", "Galeri erişimine izin vermeniz gerekiyor.");
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
     });
-
     if (result.canceled || !result.assets[0]) return;
     setLocalAvatarUri(result.assets[0].uri);
+  };
+
+  const openAvatarFromCamera = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("İzin Gerekli", "Kamera erişimine izin vermeniz gerekiyor.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setLocalAvatarUri(result.assets[0].uri);
+  };
+
+  const onChangeAvatar = () => {
+    Alert.alert("Profil Fotoğrafı", "Nasıl eklemek istersiniz?", [
+      { text: "Kamera", onPress: openAvatarFromCamera },
+      { text: "Galeri", onPress: openAvatarFromGallery },
+      { text: "İptal", style: "cancel" },
+    ]);
   };
 
   if (isLoading) {

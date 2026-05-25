@@ -3,6 +3,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   Text,
   View,
 } from "react-native";
@@ -105,9 +106,11 @@ export default function ForgotPasswordScreen() {
         </View>
 
         {/* ── Beyaz kart ── */}
-        <View
-          className="flex-1 bg-white rounded-tl-xl3 rounded-tr-xl3 px-6 pt-8"
-          style={{ paddingBottom: 48 }}
+        <ScrollView
+          className="flex-1 bg-white rounded-tl-xl3 rounded-tr-xl3"
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 32, paddingBottom: 48 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <CustomInput
             label="EMAIL"
@@ -138,7 +141,7 @@ export default function ForgotPasswordScreen() {
               onPress={handleSend}
             />
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

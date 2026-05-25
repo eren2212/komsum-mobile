@@ -70,6 +70,12 @@ export const postApi = {
       .post<RootEntity<DtoPost>>("/api/posts/create", payload)
       .then((res) => unwrap(res.data)),
 
+  /** GET /api/posts/{id} – Tek gönderi detayı (bildirim/derin link için) */
+  getPostById: (postId: number): Promise<DtoPost> =>
+    apiClient
+      .get<RootEntity<DtoPost>>(`/api/posts/${postId}`)
+      .then((res) => unwrap(res.data)),
+
   /** GET /api/posts/feed – Mahalle akışı (type verilirse filtreli) */
   getFeed: (pageNo = 0, pageSize = 10, type?: PostType): Promise<PageResponse<DtoPost>> =>
     apiClient

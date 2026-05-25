@@ -4,7 +4,6 @@ import {
   Alert,
   Animated,
   FlatList,
-  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -26,7 +25,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 
 import { commentApi, DtoComment } from "@/api/comment";
-import { DtoPost } from "@/api/post";
+import { DtoPost, postApi } from "@/api/post";
 import { userApi } from "@/api/user";
 import { colors } from "@/theme/color";
 import { useLike } from "@/hooks/useLike";
@@ -49,8 +48,8 @@ function formatDate(iso: string): string {
   });
 }
 
-function getInitials(first: string, last: string): string {
-  return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
+function getInitials(first?: string | null, last?: string | null): string {
+  return `${(first ?? "?").charAt(0)}${(last ?? "").charAt(0)}`.toUpperCase();
 }
 
 // ─── LikeButton (inline – same as feed) ──────────────────────────────────────
@@ -304,13 +303,40 @@ function CommentEditModal({ comment, onClose, onSave, isSaving }: CommentEditMod
 export default function PostDetailScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { postJson } = useLocalSearchParams<{ postJson: string }>();
+  const { id, postJson } = useLocalSearchParams<{ id: string; postJson?: string }>();
 
-  const post: DtoPost = JSON.parse(decodeURIComponent(postJson ?? "{}"));
-  const { isLiked, likeCount, toggle } = useLike(post.id, post.likedByMe, post.likeCount);
+  // Feed'den gelirse postJson dolu, bildirim/derin link'ten gelirse boş.
+  const initialPost: DtoPost | null = postJson
+    ? (() => {
+        try {
+          return JSON.parse(decodeURIComponent(postJson)) as DtoPost;
+        } catch {
+          return null;
+        }
+      })()
+    : null;
 
-  const isSponsored = post.type === "SPONSORED";
-  const isHelp = post.type === "HELP_REQUEST";
+  const postId = initialPost?.id ?? (id ? Number(id) : undefined);
+
+  // Eğer postJson yoksa veya parse başarısızsa, id üzerinden fetch et
+  const { data: fetchedPost, isLoading: postLoading, error: postError } = useQuery({
+    queryKey: ["post", "detail", postId],
+    queryFn: () => postApi.getPostById(postId!),
+    enabled: !initialPost && postId != null && !Number.isNaN(postId),
+    staleTime: 30_000,
+  });
+
+  const post: DtoPost | null = initialPost ?? fetchedPost ?? null;
+
+  // Hook'lar her render'da aynı sırada çalışmalı — post null iken de güvenli default'lar ver
+  const { isLiked, likeCount, toggle } = useLike(
+    post?.id ?? 0,
+    post?.likedByMe ?? false,
+    post?.likeCount ?? 0,
+  );
+
+  const isSponsored = post?.type === "SPONSORED";
+  const isHelp = post?.type === "HELP_REQUEST";
 
   // ── Giriş yapan kullanıcının ID'si
   const { data: myProfile } = useQuery({
@@ -325,26 +351,6 @@ export default function PostDetailScreen() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editingComment, setEditingComment] = useState<DtoComment | null>(null);
   const inputRef = useRef<TextInput>(null);
-  const keyboardHeight = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (Platform.OS !== "android") return;
-    const show = Keyboard.addListener("keyboardDidShow", (e) => {
-      Animated.timing(keyboardHeight, {
-        toValue: e.endCoordinates.height,
-        duration: 200,
-        useNativeDriver: false,
-      }).start();
-    });
-    const hide = Keyboard.addListener("keyboardDidHide", () => {
-      Animated.timing(keyboardHeight, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: false,
-      }).start();
-    });
-    return () => { show.remove(); hide.remove(); };
-  }, [keyboardHeight]);
 
   // ── Yorumları infinite yükle
   const {
@@ -354,11 +360,12 @@ export default function PostDetailScreen() {
     hasNextPage,
     fetchNextPage,
   } = useInfiniteQuery({
-    queryKey: ["postComments", post.id],
+    queryKey: ["postComments", postId],
     queryFn: ({ pageParam }) =>
-      commentApi.getPostComments(post.id, pageParam as number, 20),
+      commentApi.getPostComments(postId!, pageParam as number, 20),
     initialPageParam: 0,
     getNextPageParam: (last) => (last.last ? undefined : last.number + 1),
+    enabled: postId != null && !Number.isNaN(postId),
   });
 
   const comments = commentsData?.pages.flatMap((p) => p.content) ?? [];
@@ -368,11 +375,11 @@ export default function PostDetailScreen() {
   // ── Yorum ekle mutation
   const { mutate: addComment, isPending: isSending } = useMutation({
     mutationFn: () =>
-      commentApi.createComment(post.id, { content: commentText.trim() }),
+      commentApi.createComment(postId!, { content: commentText.trim() }),
     onSuccess: (newComment) => {
       setCommentText("");
       queryClient.setQueryData(
-        ["postComments", post.id],
+        ["postComments", postId],
         (old: any) => {
           if (!old) return old;
           const pages = [...old.pages];
@@ -395,7 +402,7 @@ export default function PostDetailScreen() {
     onMutate: (commentId) => setDeletingId(commentId),
     onSuccess: (_, commentId) => {
       setDeletingId(null);
-      queryClient.setQueryData(["postComments", post.id], (old: any) => {
+      queryClient.setQueryData(["postComments", postId], (old: any) => {
         if (!old) return old;
         return {
           ...old,
@@ -416,7 +423,7 @@ export default function PostDetailScreen() {
       commentApi.updateComment(commentId, { content }),
     onSuccess: (updatedComment) => {
       setEditingComment(null);
-      queryClient.setQueryData(["postComments", post.id], (old: any) => {
+      queryClient.setQueryData(["postComments", postId], (old: any) => {
         if (!old) return old;
         return {
           ...old,
@@ -639,18 +646,39 @@ export default function PostDetailScreen() {
     </View>
   );
 
+  // post null iken (postJson yok, henüz fetch sürüyor veya hata var) güvenli UI göster
+  if (!post) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+        <View className="flex-row items-center justify-between px-4 py-3 border-b border-[#f1f5f9]">
+          <BackButton />
+          <Text className="text-[18px] font-bold text-[#121223]">Gönderi Detayı</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View className="flex-1 items-center justify-center px-6">
+          {postLoading ? (
+            <ActivityIndicator color={colors.primary.DEFAULT} />
+          ) : (
+            <>
+              <Ionicons name="alert-circle-outline" size={48} color="#C8CADE" />
+              <Text className="text-[14px] text-neutral-400 mt-3 text-center">
+                {postError ? "Gönderi yüklenemedi veya silinmiş olabilir." : "Gönderi bulunamadı."}
+              </Text>
+            </>
+          )}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
       >
-        <Animated.View
-          style={{
-            flex: 1,
-            paddingBottom: Platform.OS === "android" ? keyboardHeight : 0,
-          }}
-        >
+        <View style={{ flex: 1 }}>
         {/* ── Top App Bar ── */}
         <View
           className="flex-row items-center justify-between px-4 py-3 border-b border-[#f1f5f9] bg-white"
@@ -754,7 +782,7 @@ export default function PostDetailScreen() {
             </TouchableOpacity>
           </View>
         </View>
-        </Animated.View>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

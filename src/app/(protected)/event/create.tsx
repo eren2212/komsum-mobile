@@ -19,7 +19,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
-import MapView, { Marker, PROVIDER_DEFAULT, MapPressEvent } from "react-native-maps";
+import MapView, { Marker, PROVIDER_GOOGLE, MapPressEvent } from "react-native-maps";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
@@ -111,7 +111,9 @@ export default function CreateEventScreen() {
 
   // ── Konum pin state ──
   const [pin, setPin] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [mapExpanded, setMapExpanded] = useState(false);
+  // Modal içinde gezerken geçici pin tutmak için (Tamam'a basınca asıl pin set edilir)
+  const [mapVisible, setMapVisible] = useState(false);
+  const [tempPin, setTempPin] = useState<{ latitude: number; longitude: number } | null>(null);
 
   // ── Mutation ──
   const { mutate: createEvent, isPending } = useMutation({
@@ -129,7 +131,7 @@ export default function CreateEventScreen() {
   });
 
   // ── Fotoğraf seçici ──
-  const onPickImage = async () => {
+  const openGallery = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert("İzin Gerekli", "Galeri erişimine izin vermeniz gerekiyor.");
@@ -143,6 +145,30 @@ export default function CreateEventScreen() {
     });
     if (result.canceled || !result.assets[0]) return;
     setImageUri(result.assets[0].uri);
+  };
+
+  const openCamera = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("İzin Gerekli", "Kamera erişimine izin vermeniz gerekiyor.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setImageUri(result.assets[0].uri);
+  };
+
+  const onPickImage = () => {
+    Alert.alert("Fotoğraf Ekle", "Nasıl eklemek istersiniz?", [
+      { text: "Kamera", onPress: openCamera },
+      { text: "Galeri", onPress: openGallery },
+      { text: "İptal", style: "cancel" },
+    ]);
   };
 
   // ── Tarih picker ──
@@ -192,9 +218,23 @@ export default function CreateEventScreen() {
     }
   };
 
-  // ── Haritada pin bırak ──
+  // ── Modal aç/kapat + haritada pin bırak ──
+  const openMap = () => {
+    setTempPin(pin); // mevcut pin varsa modal'a taşı
+    setMapVisible(true);
+  };
+
   const onMapPress = (e: MapPressEvent) => {
-    setPin(e.nativeEvent.coordinate);
+    setTempPin(e.nativeEvent.coordinate);
+  };
+
+  const confirmMapPin = () => {
+    if (tempPin) setPin(tempPin);
+    setMapVisible(false);
+  };
+
+  const cancelMap = () => {
+    setMapVisible(false);
   };
 
   // ── Gönder ──
@@ -534,53 +574,24 @@ export default function CreateEventScreen() {
             </View>
           )}
           <Pressable
-            onPress={() => setMapExpanded((v) => !v)}
-            className="flex-row items-center justify-between px-4 py-3 rounded-2xl border border-[#E8EAF0] bg-[#F5F6FA] mb-2"
+            onPress={openMap}
+            className="flex-row items-center justify-between px-4 py-3 rounded-2xl border border-[#E8EAF0] bg-[#F5F6FA] mb-6"
           >
             <View className="flex-row items-center gap-2">
               <Ionicons
                 name="map-outline"
                 size={18}
-                color={mapExpanded ? colors.primary.DEFAULT : "#646982"}
+                color={pin ? colors.primary.DEFAULT : "#646982"}
               />
               <Text
                 className="text-[13px] font-semibold"
-                style={{ color: mapExpanded ? colors.primary.DEFAULT : "#646982" }}
+                style={{ color: pin ? colors.primary.DEFAULT : "#646982" }}
               >
-                {mapExpanded ? "Haritayı Kapat" : "Haritayı Aç"}
+                {pin ? "Konumu Değiştir" : "Haritayı Aç"}
               </Text>
             </View>
-            <Ionicons
-              name={mapExpanded ? "chevron-up" : "chevron-down"}
-              size={18}
-              color="#A0A5BA"
-            />
+            <Ionicons name="chevron-forward" size={18} color="#A0A5BA" />
           </Pressable>
-
-          {mapExpanded && (
-            <View className="rounded-2xl overflow-hidden mb-6 border border-[#E8EAF0]">
-              <Text className="text-[11px] text-[#A0A5BA] text-center py-2 bg-[#F5F6FA]">
-                Haritaya uzun basarak konumu işaretle
-              </Text>
-              <MapView
-                style={{ width: "100%", height: 260 }}
-                provider={PROVIDER_DEFAULT}
-                initialRegion={{
-                  latitude: 41.015137,
-                  longitude: 28.97953,
-                  latitudeDelta: 0.05,
-                  longitudeDelta: 0.05,
-                }}
-                onLongPress={onMapPress}
-                scrollEnabled
-                zoomEnabled
-              >
-                {pin && <Marker coordinate={pin} pinColor={colors.primary.DEFAULT} />}
-              </MapView>
-            </View>
-          )}
-
-          {!mapExpanded && <View className="mb-6" />}
 
           {/* ── Açıklama ── */}
           <SectionTitle icon="document-text" title="Açıklama" />
@@ -619,6 +630,132 @@ export default function CreateEventScreen() {
 
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── Full-screen Harita Modal ── */}
+      {/* MapView ScrollView içine konulamaz (gesture çakışması). Bu yüzden Modal'da
+          tam ekran açıyoruz — kullanıcı rahatça pan/zoom yapabilir, pin koyar, onaylar. */}
+      <Modal
+        visible={mapVisible}
+        animationType="slide"
+        onRequestClose={cancelMap}
+      >
+        <SafeAreaView className="flex-1 bg-white" edges={["top", "bottom"]}>
+          {/* Modal Header */}
+          <View className="flex-row items-center justify-between px-4 py-3 border-b border-[#E8EAF0]">
+            <TouchableOpacity onPress={cancelMap} activeOpacity={0.7}>
+              <Ionicons name="close" size={26} color="#32343E" />
+            </TouchableOpacity>
+            <Text className="text-[16px] font-bold text-[#121223]">Konum Seç</Text>
+            <View style={{ width: 26 }} />
+          </View>
+
+          {/* Bilgi şeridi */}
+          <View className="flex-row items-center gap-2 px-4 py-2.5 bg-[#FFF1EE]">
+            <Ionicons name="information-circle" size={16} color={colors.primary.DEFAULT} />
+            <Text className="text-[12px] text-[#646982] flex-1">
+              Haritada uzun basarak etkinlik konumunu işaretle.
+            </Text>
+          </View>
+
+          {/* Harita — flex-1 ile ekranı kaplar, gesture çakışması yok */}
+          <MapView
+            style={{ flex: 1 }}
+            provider={PROVIDER_GOOGLE}
+            initialRegion={{
+              latitude: tempPin?.latitude ?? 41.015137,
+              longitude: tempPin?.longitude ?? 28.97953,
+              latitudeDelta: tempPin ? 0.01 : 0.05,
+              longitudeDelta: tempPin ? 0.01 : 0.05,
+            }}
+            onLongPress={onMapPress}
+            scrollEnabled
+            zoomEnabled
+            pitchEnabled
+            rotateEnabled
+          >
+            {tempPin && (
+              <Marker coordinate={tempPin}>
+                <View className="items-center">
+                  <View
+                    className="w-11 h-11 rounded-full items-center justify-center"
+                    style={{
+                      backgroundColor: colors.primary.DEFAULT,
+                      shadowColor: colors.primary.DEFAULT,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.5,
+                      shadowRadius: 8,
+                      elevation: 6,
+                    }}
+                  >
+                    <Ionicons name="calendar" size={20} color="#fff" />
+                  </View>
+                  <View
+                    style={{
+                      width: 0,
+                      height: 0,
+                      borderLeftWidth: 7,
+                      borderRightWidth: 7,
+                      borderTopWidth: 10,
+                      borderLeftColor: "transparent",
+                      borderRightColor: "transparent",
+                      borderTopColor: colors.primary.DEFAULT,
+                      marginTop: -1,
+                    }}
+                  />
+                </View>
+              </Marker>
+            )}
+          </MapView>
+
+          {/* Alt aksiyon barı */}
+          <View
+            className="px-4 py-3 bg-white border-t border-[#E8EAF0]"
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 6,
+              elevation: 5,
+            }}
+          >
+            {tempPin ? (
+              <View className="flex-row items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-[#DCFCE7]">
+                <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+                <Text className="text-[12px] font-semibold text-[#16A34A] flex-1">
+                  Pin koyuldu: {tempPin.latitude.toFixed(5)}, {tempPin.longitude.toFixed(5)}
+                </Text>
+                <Pressable hitSlop={8} onPress={() => setTempPin(null)}>
+                  <Ionicons name="close-circle" size={18} color="#16A34A" />
+                </Pressable>
+              </View>
+            ) : (
+              <View className="flex-row items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-[#F5F6FA]">
+                <Ionicons name="hand-left-outline" size={16} color="#A0A5BA" />
+                <Text className="text-[12px] text-[#646982] flex-1">
+                  Konumu işaretlemek için haritaya uzun bas
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              onPress={confirmMapPin}
+              disabled={!tempPin}
+              activeOpacity={0.85}
+              className="py-3.5 rounded-2xl items-center justify-center"
+              style={{
+                backgroundColor: tempPin ? colors.primary.DEFAULT : "#E8EAF0",
+              }}
+            >
+              <Text
+                className="text-[15px] font-bold"
+                style={{ color: tempPin ? "#fff" : "#A0A5BA" }}
+              >
+                Onayla
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }

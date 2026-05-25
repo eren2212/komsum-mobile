@@ -45,6 +45,21 @@ export function setupInterceptors() {
     const tokens = useAuthStore.getState().tokens;
     if (tokens?.access_token) {
       config.headers.Authorization = `Bearer ${tokens.access_token}`;
+      console.log(
+        "[axios] →",
+        config.method?.toUpperCase(),
+        config.url,
+        "auth=Bearer ***" + tokens.access_token.slice(-8),
+      );
+    } else {
+      console.warn(
+        "[axios] →",
+        config.method?.toUpperCase(),
+        config.url,
+        "AUTH HEADER YOK (tokens=",
+        tokens,
+        ")",
+      );
     }
     return config;
   });

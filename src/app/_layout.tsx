@@ -7,11 +7,18 @@ import { useAuthStore } from "@/store/authStore";
 import { useOnboardingStore } from "@/store/onboardingStore";
 import { setupInterceptors } from "@/api/interceptors";
 import SplashScreen from "@/components/SplashScreen";
+import {
+  setupNotifications,
+  setupNotificationListeners,
+} from "@/lib/notifications";
 
 const queryClient = new QueryClient();
 
 // Interceptor'lar uygulama başladığında bir kez kurulur
 setupInterceptors();
+
+// Foreground bildirim suppression: uygulama açıkken görsel uyarı çıkmasın
+setupNotifications();
 
 export default function RootLayout() {
   const { tokens, isHydrating, hydrateTokens } = useAuthStore();
@@ -24,6 +31,12 @@ export default function RootLayout() {
     hydrateTokens();
     check();
   }, []);
+
+  // Bildirim tap'lerini yakala — kullanıcıyı ilgili ekrana götür
+  useEffect(() => {
+    const cleanup = setupNotificationListeners(router);
+    return cleanup;
+  }, [router]);
 
   // Hydration veya Onboarding kontrolü bitmeden navigation guard çalışmasın
   useEffect(() => {

@@ -221,22 +221,44 @@ export default function MarketplaceCreateScreen() {
         });
     };
 
-    const onPickImage = async () => {
+    const openGallery = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
             Alert.alert("İzin Gerekli", "Galeri erişimine izin vermeniz gerekiyor.");
             return;
         }
-
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             allowsEditing: true,
             quality: 0.85,
         });
-
         if (result.canceled || !result.assets[0]) return;
         setLocalImageUri(result.assets[0].uri);
         setErrors((prev) => ({ ...prev, imageUrl: undefined }));
+    };
+
+    const openCamera = async () => {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+            Alert.alert("İzin Gerekli", "Kamera erişimine izin vermeniz gerekiyor.");
+            return;
+        }
+        const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            quality: 0.85,
+        });
+        if (result.canceled || !result.assets[0]) return;
+        setLocalImageUri(result.assets[0].uri);
+        setErrors((prev) => ({ ...prev, imageUrl: undefined }));
+    };
+
+    const onPickImage = () => {
+        Alert.alert("Fotoğraf Ekle", "Nasıl eklemek istersiniz?", [
+            { text: "Kamera", onPress: openCamera },
+            { text: "Galeri", onPress: openGallery },
+            { text: "İptal", style: "cancel" },
+        ]);
     };
 
     const onRemoveImage = () => {

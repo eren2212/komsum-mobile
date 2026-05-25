@@ -175,7 +175,7 @@ export default function ProfileScreen() {
     {
       icon: "notifications-outline",
       label: "Bildirimler",
-      onPress: () => { },
+      onPress: () => router.push("/notification-settings"),
     },
     {
       icon: "list-outline",

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { DtoNeighborhood, neighborhoodApi } from "@/api/neighborhood";
+import { DtoCity, DtoDistrict, DtoNeighborhood, neighborhoodApi } from "@/api/neighborhood";
 import { extractErrorMessage } from "@/utils/apiError";
 
 // ─── Tipler ───────────────────────────────────────────────────────────────────
@@ -12,31 +12,41 @@ export interface PendingForm {
 }
 
 /** Modal içinde hangi adımdayız */
-export type PickerStep = "district" | "neighborhood" | null;
+export type PickerStep = "city" | "district" | "neighborhood" | null;
 
 interface SignupState {
-  // ── Adım 1: Form verisi ─────────────────────────────────────────────────────
+  // ── Adım 1: Form verisi ──────────────────────────────────────────────────────
   pending: PendingForm | null;
   setPending: (form: PendingForm) => void;
 
-  // ── Adım 2: Mahalle seçimi (Zustand local state) ────────────────────────────
-  districts: string[];
+  // ── Adım 2: Konum seçimi ─────────────────────────────────────────────────────
+  cities: DtoCity[];
+  districts: DtoDistrict[];
   neighborhoods: DtoNeighborhood[];
-  selectedDistrict: string | null;
+
+  selectedCity: DtoCity | null;
+  selectedDistrict: DtoDistrict | null;
   selectedNeighborhood: DtoNeighborhood | null;
+
   pickerStep: PickerStep;
+
+  citiesLoading: boolean;
   districtsLoading: boolean;
   neighborhoodsLoading: boolean;
-  neighborhoodsError: string | null;
-  districtsError: string | null;
 
-  fetchDistricts: (city?: string) => Promise<void>;
-  fetchNeighborhoods: (district: string) => Promise<void>;
+  citiesError: string | null;
+  districtsError: string | null;
+  neighborhoodsError: string | null;
+
+  fetchCities: () => Promise<void>;
+  fetchDistricts: (cityId: number) => Promise<void>;
+  fetchNeighborhoods: (districtId: number) => Promise<void>;
+
   setPickerStep: (step: PickerStep) => void;
-  selectDistrict: (district: string) => void;
+  selectCity: (city: DtoCity) => void;
+  selectDistrict: (district: DtoDistrict) => void;
   selectNeighborhood: (neighborhood: DtoNeighborhood) => void;
 
-  /** Tüm kayıt akışını sıfırla (başarılı kayıt veya çıkış sonrası) */
   clearAll: () => void;
 }
 
@@ -47,43 +57,77 @@ export const useSignupStore = create<SignupState>((set, get) => ({
   pending: null,
   setPending: (form) => set({ pending: form }),
 
-  // Adım 2
+  // Adım 2 — başlangıç state
+  cities: [],
   districts: [],
   neighborhoods: [],
+  selectedCity: null,
   selectedDistrict: null,
   selectedNeighborhood: null,
   pickerStep: null,
+  citiesLoading: false,
   districtsLoading: false,
   neighborhoodsLoading: false,
-  neighborhoodsError: null,
+  citiesError: null,
   districtsError: null,
+  neighborhoodsError: null,
 
-  fetchDistricts: async (city = "Konya") => {
-    set({ districtsLoading: true, districtsError: null });
+  // ── Veri çekme ────────────────────────────────────────────────────────────────
+
+  fetchCities: async () => {
+    if (get().cities.length > 0) return; // zaten yüklendi
+    set({ citiesLoading: true, citiesError: null });
     try {
-      const districts = await neighborhoodApi.getDistricts(city);
+      const cities = await neighborhoodApi.getCities();
+      set({ cities, citiesLoading: false });
+    } catch (err: unknown) {
+      set({ citiesError: extractErrorMessage(err), citiesLoading: false });
+    }
+  },
+
+  fetchDistricts: async (cityId) => {
+    set({ districtsLoading: true, districtsError: null, districts: [] });
+    try {
+      const districts = await neighborhoodApi.getDistricts(cityId);
       set({ districts, districtsLoading: false });
     } catch (err: unknown) {
       set({ districtsError: extractErrorMessage(err), districtsLoading: false });
     }
   },
 
-  fetchNeighborhoods: async (district) => {
+  fetchNeighborhoods: async (districtId) => {
     set({ neighborhoodsLoading: true, neighborhoodsError: null, neighborhoods: [] });
     try {
-      const neighborhoods = await neighborhoodApi.getNeighborhoods(district);
+      const neighborhoods = await neighborhoodApi.getNeighborhoods(districtId);
       set({ neighborhoods, neighborhoodsLoading: false });
     } catch (err: unknown) {
       set({ neighborhoodsError: extractErrorMessage(err), neighborhoodsLoading: false });
     }
   },
 
+  // ── Seçim işlemleri ──────────────────────────────────────────────────────────
+
   setPickerStep: (step) => set({ pickerStep: step }),
 
+  selectCity: (city) => {
+    set({
+      selectedCity: city,
+      selectedDistrict: null,
+      selectedNeighborhood: null,
+      districts: [],
+      neighborhoods: [],
+    });
+    get().fetchDistricts(city.id);
+    set({ pickerStep: "district" });
+  },
+
   selectDistrict: (district) => {
-    set({ selectedDistrict: district, selectedNeighborhood: null });
-    // İlçe seçilince mahalleleri çek ve adımı mahalle seçimine geç
-    get().fetchNeighborhoods(district);
+    set({
+      selectedDistrict: district,
+      selectedNeighborhood: null,
+      neighborhoods: [],
+    });
+    get().fetchNeighborhoods(district.id);
     set({ pickerStep: "neighborhood" });
   },
 
@@ -91,17 +135,23 @@ export const useSignupStore = create<SignupState>((set, get) => ({
     set({ selectedNeighborhood: neighborhood, pickerStep: null });
   },
 
+  // ── Temizle ──────────────────────────────────────────────────────────────────
+
   clearAll: () =>
     set({
       pending: null,
+      cities: [],
       districts: [],
       neighborhoods: [],
+      selectedCity: null,
       selectedDistrict: null,
       selectedNeighborhood: null,
       pickerStep: null,
+      citiesLoading: false,
       districtsLoading: false,
       neighborhoodsLoading: false,
-      neighborhoodsError: null,
+      citiesError: null,
       districtsError: null,
+      neighborhoodsError: null,
     }),
 }));

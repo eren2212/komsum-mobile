@@ -10,13 +10,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 
 import { DtoEvent, EventCategory, eventApi } from "@/api/event";
 import { colors } from "@/theme/color";
@@ -28,12 +31,42 @@ const CATEGORY_META: Record<
   EventCategory,
   { label: string; color: string; bgColor: string; iconName: string }
 > = {
-  SPORTS: { label: "Sağlık & Spor", color: "#0D9488", bgColor: "#CCFBF1", iconName: "fitness" },
-  ARTS_MUSIC: { label: "Kültür & Sanat", color: "#7C3AED", bgColor: "#EDE9FE", iconName: "musical-notes" },
-  FOOD_DRINK: { label: "Yeme & İçme", color: "#EA580C", bgColor: "#FFEDD5", iconName: "restaurant" },
-  TRAVEL: { label: "Gezi & Seyahat", color: "#2563EB", bgColor: "#DBEAFE", iconName: "airplane" },
-  EDUCATION: { label: "Eğitim", color: "#16A34A", bgColor: "#DCFCE7", iconName: "school" },
-  OTHER: { label: "Diğer", color: "#64748B", bgColor: "#F1F5F9", iconName: "apps" },
+  SPORTS: {
+    label: "Sağlık & Spor",
+    color: "#0D9488",
+    bgColor: "#CCFBF1",
+    iconName: "fitness",
+  },
+  ARTS_MUSIC: {
+    label: "Kültür & Sanat",
+    color: "#7C3AED",
+    bgColor: "#EDE9FE",
+    iconName: "musical-notes",
+  },
+  FOOD_DRINK: {
+    label: "Yeme & İçme",
+    color: "#EA580C",
+    bgColor: "#FFEDD5",
+    iconName: "restaurant",
+  },
+  TRAVEL: {
+    label: "Gezi & Seyahat",
+    color: "#2563EB",
+    bgColor: "#DBEAFE",
+    iconName: "airplane",
+  },
+  EDUCATION: {
+    label: "Eğitim",
+    color: "#16A34A",
+    bgColor: "#DCFCE7",
+    iconName: "school",
+  },
+  OTHER: {
+    label: "Diğer",
+    color: "#64748B",
+    bgColor: "#F1F5F9",
+    iconName: "apps",
+  },
 };
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
@@ -78,7 +111,14 @@ function EventDetailSkeleton() {
         <View className="h-[1px] bg-[#F0F1F5] my-2" />
         <SkeletonBox width={200} height={14} borderRadius={7} />
         <SkeletonBox width={160} height={14} borderRadius={7} />
-        <View style={{ height: 200, backgroundColor: "#EBEBF0", borderRadius: 16, marginTop: 8 }} />
+        <View
+          style={{
+            height: 200,
+            backgroundColor: "#EBEBF0",
+            borderRadius: 16,
+            marginTop: 8,
+          }}
+        />
       </View>
     </View>
   );
@@ -121,14 +161,15 @@ export default function EventDetailScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
-  const { id, eventJson } = useLocalSearchParams<{ id: string; eventJson: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
 
   const eventId = Number(id);
 
-  // Anlık gösterim için kart verisini cache olarak kullan
-  const initial: DtoEvent | undefined = eventJson
-    ? JSON.parse(decodeURIComponent(eventJson))
-    : undefined;
+  // Feed cache'inden anlık gösterim için veri al
+  const initial: DtoEvent | undefined = queryClient
+    .getQueryData<any>(["districtEvents"])
+    ?.pages?.flatMap((p: any) => p.content)
+    ?.find((e: DtoEvent) => e.id === eventId);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ["event", eventId],
@@ -145,8 +186,16 @@ export default function EventDetailScreen() {
     mutationFn: () => eventApi.toggleParticipation(eventId),
     onMutate: () => {
       Animated.sequence([
-        Animated.timing(joinAnim, { toValue: 0.88, duration: 80, useNativeDriver: true }),
-        Animated.spring(joinAnim, { toValue: 1, useNativeDriver: true, bounciness: 10 }),
+        Animated.timing(joinAnim, {
+          toValue: 0.88,
+          duration: 80,
+          useNativeDriver: true,
+        }),
+        Animated.spring(joinAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          bounciness: 10,
+        }),
       ]).start();
       // Optimistic update: bu sayfadaki cache
       queryClient.setQueryData<DtoEvent>(["event", eventId], (old) => {
@@ -169,13 +218,13 @@ export default function EventDetailScreen() {
             content: page.content.map((e: DtoEvent) =>
               e.id === eventId
                 ? {
-                  ...e,
-                  joinedByMe: !e.joinedByMe,
-                  participantCount: e.joinedByMe
-                    ? Math.max(0, e.participantCount - 1)
-                    : e.participantCount + 1,
-                }
-                : e
+                    ...e,
+                    joinedByMe: !e.joinedByMe,
+                    participantCount: e.joinedByMe
+                      ? Math.max(0, e.participantCount - 1)
+                      : e.participantCount + 1,
+                  }
+                : e,
             ),
           })),
         };
@@ -192,8 +241,16 @@ export default function EventDetailScreen() {
     mutationFn: () => eventApi.toggleBookmark(eventId),
     onMutate: () => {
       Animated.sequence([
-        Animated.timing(bookmarkAnim, { toValue: 1.35, duration: 100, useNativeDriver: true }),
-        Animated.spring(bookmarkAnim, { toValue: 1, useNativeDriver: true, bounciness: 14 }),
+        Animated.timing(bookmarkAnim, {
+          toValue: 1.35,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.spring(bookmarkAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          bounciness: 14,
+        }),
       ]).start();
       queryClient.setQueryData<DtoEvent>(["event", eventId], (old) => {
         if (!old) return old;
@@ -206,7 +263,9 @@ export default function EventDetailScreen() {
           pages: old.pages.map((page: any) => ({
             ...page,
             content: page.content.map((e: DtoEvent) =>
-              e.id === eventId ? { ...e, bookmarkedByMe: !e.bookmarkedByMe } : e
+              e.id === eventId
+                ? { ...e, bookmarkedByMe: !e.bookmarkedByMe }
+                : e,
             ),
           })),
         };
@@ -227,11 +286,13 @@ export default function EventDetailScreen() {
       ios: `maps://?daddr=${latitude},${longitude}&dirflg=d`,
       android: `geo:${latitude},${longitude}?q=${latitude},${longitude}(${label})`,
     });
-    Linking.openURL(url ?? `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`).catch(
-      () =>
-        Linking.openURL(
-          `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`
-        )
+    Linking.openURL(
+      url ??
+        `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`,
+    ).catch(() =>
+      Linking.openURL(
+        `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`,
+      ),
     );
   };
 
@@ -249,7 +310,11 @@ export default function EventDetailScreen() {
 
   return (
     <View className="flex-1 bg-surface">
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar
+        barStyle="light-content"
+        translucent
+        backgroundColor="transparent"
+      />
 
       {/* ── Scrollable content ──────────────────────────────────────────────── */}
       <ScrollView
@@ -269,7 +334,11 @@ export default function EventDetailScreen() {
             />
           ) : (
             <View
-              style={{ width: "100%", height: 300, backgroundColor: meta.bgColor }}
+              style={{
+                width: "100%",
+                height: 300,
+                backgroundColor: meta.bgColor,
+              }}
               className="items-center justify-center"
             >
               <Ionicons
@@ -283,7 +352,13 @@ export default function EventDetailScreen() {
           {/* Alt gradient */}
           <LinearGradient
             colors={["transparent", "rgba(0,0,0,0.45)"]}
-            style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 120 }}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: 120,
+            }}
           />
         </View>
 
@@ -303,8 +378,15 @@ export default function EventDetailScreen() {
               className="flex-row items-center gap-1.5 px-3 py-1 rounded-full"
               style={{ backgroundColor: meta.bgColor }}
             >
-              <Ionicons name={meta.iconName as any} size={12} color={meta.color} />
-              <Text className="text-[11px] font-bold" style={{ color: meta.color }}>
+              <Ionicons
+                name={meta.iconName as any}
+                size={12}
+                color={meta.color}
+              />
+              <Text
+                className="text-[11px] font-bold"
+                style={{ color: meta.color }}
+              >
                 {meta.label}
               </Text>
             </View>
@@ -320,7 +402,10 @@ export default function EventDetailScreen() {
             className="flex-row items-center gap-3 mb-5 p-3 rounded-[14px] bg-[#F8F9FB]"
             activeOpacity={0.75}
             onPress={() =>
-              router.push({ pathname: "/(protected)/user/[id]", params: { id: String(event.authorId) } })
+              router.push({
+                pathname: "/(protected)/user/[id]",
+                params: { id: String(event.authorId) },
+              })
             }
           >
             <View
@@ -328,11 +413,14 @@ export default function EventDetailScreen() {
               style={{ backgroundColor: colors.secondary.DEFAULT }}
             >
               <Text className="text-[13px] font-bold text-white">
-                {event.authorFirstName.charAt(0)}{event.authorLastName.charAt(0)}
+                {event.authorFirstName.charAt(0)}
+                {event.authorLastName.charAt(0)}
               </Text>
             </View>
             <View className="flex-1">
-              <Text className="text-[11px] text-neutral-300 font-medium">Organizatör</Text>
+              <Text className="text-[11px] text-neutral-300 font-medium">
+                Organizatör
+              </Text>
               <Text className="text-[14px] font-bold text-[#181c2e]">
                 {event.authorFirstName} {event.authorLastName}
               </Text>
@@ -342,7 +430,10 @@ export default function EventDetailScreen() {
               style={{ backgroundColor: colors.primary.DEFAULT + "20" }}
             >
               <Ionicons name="star" size={11} color={colors.primary.DEFAULT} />
-              <Text className="text-[10px] font-bold" style={{ color: colors.primary.DEFAULT }}>
+              <Text
+                className="text-[10px] font-bold"
+                style={{ color: colors.primary.DEFAULT }}
+              >
                 ORGANİZATÖR
               </Text>
             </View>
@@ -421,7 +512,9 @@ export default function EventDetailScreen() {
 
           {/* Harita başlığı */}
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-[15px] font-bold text-[#181c2e]">Etkinlik Yeri</Text>
+            <Text className="text-[15px] font-bold text-[#181c2e]">
+              Etkinlik Yeri
+            </Text>
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={openDirections}
@@ -436,7 +529,9 @@ export default function EventDetailScreen() {
               }}
             >
               <Ionicons name="navigate" size={13} color="#fff" />
-              <Text className="text-[12px] font-bold text-white">Yol Tarifi Al</Text>
+              <Text className="text-[12px] font-bold text-white">
+                Yol Tarifi Al
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -453,7 +548,7 @@ export default function EventDetailScreen() {
             }}
           >
             <MapView
-              provider={PROVIDER_DEFAULT}
+              provider={PROVIDER_GOOGLE}
               style={{ width: "100%", height: 210 }}
               initialRegion={{
                 latitude: event.latitude,
@@ -467,11 +562,13 @@ export default function EventDetailScreen() {
               rotateEnabled={false}
             >
               <Marker
-                coordinate={{ latitude: event.latitude, longitude: event.longitude }}
+                coordinate={{
+                  latitude: event.latitude,
+                  longitude: event.longitude,
+                }}
                 title={event.title}
                 description={event.location}
               >
-                {/* Özel işaretçi */}
                 <View className="items-center">
                   <View
                     className="w-11 h-11 rounded-full items-center justify-center"
@@ -486,7 +583,6 @@ export default function EventDetailScreen() {
                   >
                     <Ionicons name="calendar" size={20} color="#fff" />
                   </View>
-                  {/* İşaretçi kuyruğu */}
                   <View
                     style={{
                       width: 0,
@@ -508,7 +604,10 @@ export default function EventDetailScreen() {
           {/* Konum metni haritanın altında */}
           <View className="flex-row items-center gap-1.5 mb-6">
             <Ionicons name="location-outline" size={13} color="#A0A5BA" />
-            <Text className="text-[12px] text-neutral-300 font-medium flex-1" numberOfLines={2}>
+            <Text
+              className="text-[12px] text-neutral-300 font-medium flex-1"
+              numberOfLines={2}
+            >
               {event.location}
             </Text>
           </View>
@@ -584,11 +683,17 @@ export default function EventDetailScreen() {
           <Animated.View style={{ transform: [{ scale: joinAnim }] }}>
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => !participateMutation.isPending && participateMutation.mutate()}
+              onPress={() =>
+                !participateMutation.isPending && participateMutation.mutate()
+              }
               className="flex-row items-center gap-2 px-6 py-3 rounded-[16px]"
               style={{
-                backgroundColor: event.joinedByMe ? "#DCFCE7" : colors.primary.DEFAULT,
-                shadowColor: event.joinedByMe ? "transparent" : colors.primary.DEFAULT,
+                backgroundColor: event.joinedByMe
+                  ? "#DCFCE7"
+                  : colors.primary.DEFAULT,
+                shadowColor: event.joinedByMe
+                  ? "transparent"
+                  : colors.primary.DEFAULT,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.35,
                 shadowRadius: 10,
@@ -596,7 +701,9 @@ export default function EventDetailScreen() {
               }}
             >
               <Ionicons
-                name={event.joinedByMe ? "checkmark-circle" : "add-circle-outline"}
+                name={
+                  event.joinedByMe ? "checkmark-circle" : "add-circle-outline"
+                }
                 size={18}
                 color={event.joinedByMe ? "#16A34A" : "#fff"}
               />
