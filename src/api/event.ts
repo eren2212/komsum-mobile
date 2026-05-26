@@ -78,11 +78,33 @@ export const eventApi = {
       .get<RootEntity<DtoEvent>>(`/api/events/${eventId}`)
       .then((res) => unwrap(res.data)),
 
-  /** GET /api/events/district – Kullanıcının ilçesindeki aktif etkinlikler */
+  /** GET /api/events/district – Kullanıcının ilçesindeki aktif etkinlikler (eski, geriye uyumlu) */
   getDistrictEvents: (pageNo = 0, pageSize = 10): Promise<PageResponse<DtoEvent>> =>
     apiClient
       .get<RootEntity<PageResponse<DtoEvent>>>("/api/events/district", {
         params: { pageNo, pageSize },
+      })
+      .then((res) => unwrap(res.data)),
+
+  /**
+   * GET /api/events/nearby – Cihaz konumuna göre radius (metre) içindeki etkinlikler.
+   * lat/lng verilmezse backend ilçe bazlı akışa düşer (geriye uyumluluk).
+   */
+  getNearbyEvents: (
+    lat?: number,
+    lng?: number,
+    radius = 10000,
+    pageNo = 0,
+    pageSize = 10,
+  ): Promise<PageResponse<DtoEvent>> =>
+    apiClient
+      .get<RootEntity<PageResponse<DtoEvent>>>("/api/events/nearby", {
+        params: {
+          pageNo,
+          pageSize,
+          radius,
+          ...(lat != null && lng != null ? { lat, lng } : {}),
+        },
       })
       .then((res) => unwrap(res.data)),
 

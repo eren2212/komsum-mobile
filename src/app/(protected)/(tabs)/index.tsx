@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -23,7 +23,13 @@ import { userApi } from "@/api/user";
 import { chatApi } from "@/api/chat";
 import { colors } from "@/theme/color";
 import { useLike } from "@/hooks/useLike";
+import { useUserLocation } from "@/hooks/useUserLocation";
 import { EventCard, EventCardCompactSkeleton, SkeletonBox } from "@/components";
+
+// ─── Yarıçap (KM) seçenekleri ───────────────────────────────────────────────
+// Esnaf (SPONSORED) ve Etkinlik sekmelerinde kullanıcı yakınlık yarıçapını seçer.
+const RADIUS_OPTIONS_KM = [2, 5, 10, 25];
+const DEFAULT_RADIUS_KM = 5;
 
 // ─── Filtre Tipleri ───────────────────────────────────────────────────────────
 
@@ -430,6 +436,65 @@ function FilterChip({ option, active, onPress }: FilterChipProps) {
   );
 }
 
+// ─── RadiusSelector (KM chip'leri) ─────────────────────────────────────────────
+
+interface RadiusSelectorProps {
+  valueKm: number;
+  onChange: (km: number) => void;
+}
+
+function RadiusSelector({ valueKm, onChange }: RadiusSelectorProps) {
+  return (
+    <View className="flex-row items-center gap-2 mx-4 mt-3 mb-1">
+      <View className="flex-row items-center gap-1">
+        <Ionicons name="navigate" size={13} color={colors.primary.DEFAULT} />
+        <Text className="text-[12px] font-semibold text-[#646982]">Yakınımdakiler</Text>
+      </View>
+      <View className="flex-row gap-1.5 flex-1 justify-end">
+        {RADIUS_OPTIONS_KM.map((km) => {
+          const active = km === valueKm;
+          return (
+            <TouchableOpacity
+              key={km}
+              onPress={() => onChange(km)}
+              activeOpacity={0.8}
+              className="px-3 py-1.5 rounded-full"
+              style={
+                active
+                  ? { backgroundColor: colors.primary.DEFAULT }
+                  : { backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#E8EAF0" }
+              }
+            >
+              <Text
+                className="text-[12px] font-bold"
+                style={{ color: active ? "#fff" : "#646982" }}
+              >
+                {km} km
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// ─── LocationBanner (izin reddi / fallback uyarısı) ─────────────────────────────
+
+function LocationBanner({ onRetry }: { onRetry: () => void }) {
+  return (
+    <View className="flex-row items-center gap-2 mx-4 mt-3 mb-1 px-3 py-2.5 rounded-[12px] bg-[#FEF3C7]">
+      <Ionicons name="location-outline" size={15} color="#B45309" />
+      <Text className="text-[12px] font-medium text-[#B45309] flex-1">
+        Konum kapalı — mahallene göre gösteriyoruz.
+      </Text>
+      <TouchableOpacity onPress={onRetry} activeOpacity={0.7}>
+        <Text className="text-[12px] font-bold text-[#B45309] underline">Konumu Aç</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ─── EmptyState ───────────────────────────────────────────────────────────────
 
 function EmptyState({ isEvent }: { isEvent?: boolean }) {
@@ -482,13 +547,32 @@ function SkeletonList({ isEvent }: { isEvent?: boolean }) {
 export default function HomeScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("ALL");
+  const [radiusKm, setRadiusKm] = useState<number>(DEFAULT_RADIUS_KM);
   const isEventMode = activeFilter === "EVENT";
+
+  // Esnaf (SPONSORED) ve Etkinlik sekmeleri konuma göre çalışır.
+  const usesLocation = activeFilter === "SPONSORED" || isEventMode;
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["me", "profile", "myProfile"],
     queryFn: () => userApi.getMyProfile(),
     staleTime: 5 * 60 * 1000,
   });
+
+  // ── Konum ─────────────────────────────────────────────────────────────────
+  // Konuma ihtiyaç duyan bir sekmeye geçilince otomatik izin iste; reddedilirse
+  // backend mahalle/ilçe fallback'ine düşer (lat/lng gönderilmez).
+  const { coords, status: locStatus, settled: locSettled, request: requestLocation } =
+    useUserLocation();
+
+  useEffect(() => {
+    if (usesLocation) requestLocation();
+  }, [usesLocation, requestLocation]);
+
+  const radiusMeters = radiusKm * 1000;
+  const hasCoords = locStatus === "granted" && !!coords;
+  // İzin reddedildiğinde gösterilecek fallback uyarısı (konum gerektiren sekmelerde)
+  const showLocationBanner = usesLocation && (locStatus === "denied" || locStatus === "error");
 
   // ── Posts query (tip filtreliyle) ─────────────────────────────────────────
   const postType: PostType | undefined =
@@ -497,22 +581,47 @@ export default function HomeScreen() {
         activeFilter === "ALL" ? undefined :
           undefined;
 
+  const isSponsored = activeFilter === "SPONSORED";
+  // SPONSORED'da yakınlık kullanılır → konum çözülene (granted/denied) kadar bekle ki
+  // önce konumsuz sonra konumlu olmak üzere çift fetch / titreme olmasın.
+  const postsEnabled = !isEventMode && (!isSponsored || locSettled);
+
   const postsQuery = useInfiniteQuery({
-    queryKey: ["neighborhoodFeed", activeFilter],
-    queryFn: ({ pageParam }) => postApi.getFeed(pageParam as number, 10, postType),
+    queryKey: [
+      "neighborhoodFeed",
+      activeFilter,
+      isSponsored ? radiusKm : null,
+      isSponsored && hasCoords ? coords : null,
+    ],
+    queryFn: ({ pageParam }) =>
+      postApi.getFeed(
+        pageParam as number,
+        10,
+        postType,
+        isSponsored && hasCoords ? coords!.latitude : undefined,
+        isSponsored && hasCoords ? coords!.longitude : undefined,
+        radiusMeters,
+      ),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => (lastPage.last ? undefined : lastPage.number + 1),
-    enabled: !isEventMode,
+    enabled: postsEnabled,
     staleTime: 3 * 60 * 1000, // 3 dk boyunca fresh — chip değişiminde yeniden fetch yok
   });
 
-  // ── Events query ──────────────────────────────────────────────────────────
+  // ── Events query (yakınlık bazlı; konum yoksa ilçe fallback) ────────────────
   const eventsQuery = useInfiniteQuery({
-    queryKey: ["districtEvents"],
-    queryFn: ({ pageParam }) => eventApi.getDistrictEvents(pageParam as number, 10),
+    queryKey: ["nearbyEvents", radiusKm, hasCoords ? coords : null],
+    queryFn: ({ pageParam }) =>
+      eventApi.getNearbyEvents(
+        hasCoords ? coords!.latitude : undefined,
+        hasCoords ? coords!.longitude : undefined,
+        radiusMeters,
+        pageParam as number,
+        10,
+      ),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => (lastPage.last ? undefined : lastPage.number + 1),
-    enabled: isEventMode,
+    enabled: isEventMode && locSettled,
     staleTime: 3 * 60 * 1000, // 3 dk boyunca fresh — tekrar Etkinlik'e gelinince yeniden fetch yok
   });
 
@@ -528,7 +637,11 @@ export default function HomeScreen() {
     );
   }, [isEventMode, eventsQuery.data, postsQuery.data]);
 
-  const isLoading = isEventMode ? eventsQuery.isLoading : postsQuery.isLoading;
+  // Konum gerektiren bir sekmede izin/konum henüz çözülmediyse skeleton göster
+  // (boş durum yerine), aksi halde "sonuç yok" anlık olarak yanıp sönerdi.
+  const waitingForLocation = usesLocation && !locSettled;
+  const isLoading =
+    (isEventMode ? eventsQuery.isLoading : postsQuery.isLoading) || waitingForLocation;
   const isFetchingNext = isEventMode ? eventsQuery.isFetchingNextPage : postsQuery.isFetchingNextPage;
   const hasNextPage = isEventMode ? eventsQuery.hasNextPage : postsQuery.hasNextPage;
   const fetchNextPage = isEventMode ? eventsQuery.fetchNextPage : postsQuery.fetchNextPage;
@@ -666,6 +779,14 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
+        {/* Yakınlık (KM) seçici — Esnaf ve Etkinlik sekmelerinde */}
+        {usesLocation && (
+          <RadiusSelector valueKm={radiusKm} onChange={setRadiusKm} />
+        )}
+
+        {/* Konum reddedildiyse fallback uyarısı */}
+        {showLocationBanner && <LocationBanner onRetry={requestLocation} />}
+
         {/* Etkinlik modu açıklaması + Etkinlik Ekle butonu */}
         {isEventMode && (
           <View className="flex-row items-center gap-2 mx-4 mt-3 mb-4">
@@ -691,7 +812,7 @@ export default function HomeScreen() {
       </View>
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [profile, profileLoading, activeFilter, isEventMode, router]
+    [profile, profileLoading, activeFilter, isEventMode, router, usesLocation, radiusKm, showLocationBanner, requestLocation]
   );
 
   const ListFooter = useMemo(() => {

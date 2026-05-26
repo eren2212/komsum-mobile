@@ -45,6 +45,12 @@
       ],
       "@react-native-community/datetimepicker",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Komsum, yakınındaki esnaf ve etkinlikleri gösterebilmek için konumunu kullanmak istiyor."
+        }
+      ],
+      [
         "expo-notifications",
         {
           "color": "#FF6B4A",

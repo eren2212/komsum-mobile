@@ -19,6 +19,9 @@ export interface DtoMerchant {
   verified: boolean;
   ownerFirstName: string;
   ownerLastName: string;
+  /** Dükkanın harita konumu (pin için). Girilmemişse null. */
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface DtoCreateMerchant {
@@ -27,6 +30,9 @@ export interface DtoCreateMerchant {
   phone: string;
   address: string;
   description?: string;
+  /** Dükkanın harita konumu — zorunlu (esnaf haritadan işaretler) */
+  latitude: number;
+  longitude: number;
 }
 
 export interface DtoUpdateMerchant {
@@ -35,6 +41,9 @@ export interface DtoUpdateMerchant {
   description?: string;
   profileImageUrl?: string;
   neighborhoodId?: number;
+  /** Dükkan taşındıysa yeni konum — ikisi birlikte gönderilmeli */
+  latitude?: number;
+  longitude?: number;
 }
 
 // ─── API ──────────────────────────────────────────────────────────────────────

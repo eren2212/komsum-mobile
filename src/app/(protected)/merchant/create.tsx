@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  ActivityIndicator,
   View,
   Text,
   ScrollView,
@@ -8,16 +9,24 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import MapView, { Marker, PROVIDER_GOOGLE, LongPressEvent } from "react-native-maps";
+import * as Location from "expo-location";
 
 import { merchantApi, DtoCreateMerchant } from "@/api/merchant";
 import { colors } from "@/theme/color";
 import { BackButton, CustomInput, CustomButton } from "@/components";
+
+// Haritada konum işaretlenmezken varsayılan merkez (İstanbul)
+const DEFAULT_REGION = { latitude: 41.015137, longitude: 28.97953 };
+
+type Pin = { latitude: number; longitude: number };
 
 // ─── Sabit değerler ──────────────────────────────────────────────────────────
 
@@ -150,10 +159,20 @@ function Step2Content({
   form,
   errors,
   onUpdate,
+  pin,
+  pinError,
+  locating,
+  onOpenMap,
+  onUseMyLocation,
 }: {
   form: FormData;
   errors: FormErrors;
   onUpdate: (key: keyof FormData, value: string) => void;
+  pin: Pin | null;
+  pinError?: string;
+  locating: boolean;
+  onOpenMap: () => void;
+  onUseMyLocation: () => void;
 }) {
   return (
     <View className="px-6 pt-4">
@@ -185,6 +204,61 @@ function Step2Content({
             <Ionicons name="location-outline" size={18} color="#A0A5BA" />
           }
         />
+      </View>
+
+      {/* Dükkan Konumu (harita) — backend zorunlu kılıyor */}
+      <View className="mb-5">
+        <Text className="text-[13px] font-normal uppercase text-neutral-600 mb-2 tracking-wide">
+          Dükkan Konumu
+        </Text>
+
+        {pin ? (
+          <View className="flex-row items-center gap-2 mb-2 px-3 py-2 rounded-xl bg-[#DCFCE7]">
+            <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+            <Text className="text-[12px] font-semibold text-[#16A34A] flex-1">
+              Konum seçildi: {pin.latitude.toFixed(5)}, {pin.longitude.toFixed(5)}
+            </Text>
+          </View>
+        ) : null}
+
+        <View className="flex-row gap-2">
+          <TouchableOpacity
+            onPress={onOpenMap}
+            activeOpacity={0.8}
+            className={`flex-1 flex-row items-center justify-center gap-2 h-[52px] rounded-[16px] bg-[#F5F6FA] border ${pinError ? "border-[#EF4444]" : "border-[#E8EAF0]"
+              }`}
+          >
+            <Ionicons
+              name="map-outline"
+              size={18}
+              color={pin ? colors.primary.DEFAULT : "#646982"}
+            />
+            <Text
+              className="text-[13px] font-semibold"
+              style={{ color: pin ? colors.primary.DEFAULT : "#646982" }}
+            >
+              {pin ? "Haritada Değiştir" : "Haritadan Seç"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={onUseMyLocation}
+            disabled={locating}
+            activeOpacity={0.8}
+            className="flex-row items-center justify-center gap-2 px-4 h-[52px] rounded-[16px]"
+            style={{ backgroundColor: colors.primary.DEFAULT, opacity: locating ? 0.7 : 1 }}
+          >
+            {locating ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="navigate" size={18} color="#fff" />
+            )}
+            <Text className="text-[13px] font-bold text-white">Konumum</Text>
+          </TouchableOpacity>
+        </View>
+        {pinError ? (
+          <Text className="text-xs text-red-500 mt-1.5 ml-1">{pinError}</Text>
+        ) : null}
       </View>
 
       {/* Açıklama (isteğe bağlı) */}
@@ -240,6 +314,13 @@ export default function MerchantCreateScreen() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
 
+  // ── Konum (dükkan koordinatı) state ──
+  const [pin, setPin] = useState<Pin | null>(null);
+  const [pinError, setPinError] = useState<string | undefined>(undefined);
+  const [locating, setLocating] = useState(false);
+  const [mapVisible, setMapVisible] = useState(false);
+  const [tempPin, setTempPin] = useState<Pin | null>(null);
+
   const { mutate: createProfile, isPending } = useMutation({
     mutationFn: (data: DtoCreateMerchant) =>
       merchantApi.createMerchantProfile(data),
@@ -275,7 +356,54 @@ export default function MerchantCreateScreen() {
     if (!form.phone.trim()) errs.phone = "Telefon numarası zorunludur.";
     if (!form.address.trim()) errs.address = "Açık adres girmelisiniz.";
     setErrors(errs);
-    return Object.keys(errs).length === 0;
+
+    const geoMissing = !pin;
+    setPinError(geoMissing ? "Dükkanının konumunu haritadan seç veya 'Konumum'a bas." : undefined);
+
+    return Object.keys(errs).length === 0 && !geoMissing;
+  };
+
+  // ── Konum: haritadan seç ──
+  const openMap = () => {
+    setTempPin(pin);
+    setMapVisible(true);
+  };
+
+  const onMapPress = (e: LongPressEvent) => {
+    setTempPin(e.nativeEvent.coordinate);
+  };
+
+  const confirmMapPin = () => {
+    if (tempPin) {
+      setPin(tempPin);
+      setPinError(undefined);
+    }
+    setMapVisible(false);
+  };
+
+  // ── Konum: cihaz GPS'ini kullan ──
+  const useMyLocation = async () => {
+    if (locating) return;
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Konum İzni Gerekli",
+          "Dükkanını mevcut konumuna işaretlemek için konum iznine ihtiyaç var. Haritadan da elle seçebilirsin.",
+        );
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setPin({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+      setPinError(undefined);
+    } catch {
+      Alert.alert("Konum Alınamadı", "Konum alınamadı. Lütfen haritadan elle seç.");
+    } finally {
+      setLocating(false);
+    }
   };
 
   const handleNext = () => {
@@ -302,6 +430,8 @@ export default function MerchantCreateScreen() {
       phone: form.phone.trim(),
       address: form.address.trim(),
       description: form.description.trim() || undefined,
+      latitude: pin!.latitude,
+      longitude: pin!.longitude,
     });
   };
 
@@ -364,7 +494,16 @@ export default function MerchantCreateScreen() {
               onCategoryPress={() => setCategoryModalVisible(true)}
             />
           ) : (
-            <Step2Content form={form} errors={errors} onUpdate={update} />
+            <Step2Content
+              form={form}
+              errors={errors}
+              onUpdate={update}
+              pin={pin}
+              pinError={pinError}
+              locating={locating}
+              onOpenMap={openMap}
+              onUseMyLocation={useMyLocation}
+            />
           )}
         </ScrollView>
 
@@ -461,6 +600,109 @@ export default function MerchantCreateScreen() {
             />
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* ── Harita Konum Seçici Modal ── */}
+      <Modal visible={mapVisible} animationType="slide" onRequestClose={() => setMapVisible(false)}>
+        <SafeAreaView className="flex-1 bg-white" edges={["top", "bottom"]}>
+          <View className="flex-row items-center justify-between px-4 py-3 border-b border-[#E8EAF0]">
+            <TouchableOpacity onPress={() => setMapVisible(false)} activeOpacity={0.7}>
+              <Ionicons name="close" size={26} color="#32343E" />
+            </TouchableOpacity>
+            <Text className="text-[16px] font-bold text-[#121223]">Dükkan Konumu</Text>
+            <View style={{ width: 26 }} />
+          </View>
+
+          <View className="flex-row items-center gap-2 px-4 py-2.5 bg-[#FFF1EE]">
+            <Ionicons name="information-circle" size={16} color={colors.primary.DEFAULT} />
+            <Text className="text-[12px] text-[#646982] flex-1">
+              Haritada uzun basarak dükkanının konumunu işaretle.
+            </Text>
+          </View>
+
+          <MapView
+            style={{ flex: 1 }}
+            provider={PROVIDER_GOOGLE}
+            initialRegion={{
+              latitude: tempPin?.latitude ?? DEFAULT_REGION.latitude,
+              longitude: tempPin?.longitude ?? DEFAULT_REGION.longitude,
+              latitudeDelta: tempPin ? 0.01 : 0.05,
+              longitudeDelta: tempPin ? 0.01 : 0.05,
+            }}
+            onLongPress={onMapPress}
+            scrollEnabled
+            zoomEnabled
+          >
+            {tempPin && (
+              <Marker coordinate={tempPin}>
+                <View className="items-center">
+                  <View
+                    className="w-11 h-11 rounded-full items-center justify-center"
+                    style={{
+                      backgroundColor: colors.primary.DEFAULT,
+                      shadowColor: colors.primary.DEFAULT,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.5,
+                      shadowRadius: 8,
+                      elevation: 6,
+                    }}
+                  >
+                    <Ionicons name="storefront" size={20} color="#fff" />
+                  </View>
+                  <View
+                    style={{
+                      width: 0,
+                      height: 0,
+                      borderLeftWidth: 7,
+                      borderRightWidth: 7,
+                      borderTopWidth: 10,
+                      borderLeftColor: "transparent",
+                      borderRightColor: "transparent",
+                      borderTopColor: colors.primary.DEFAULT,
+                      marginTop: -1,
+                    }}
+                  />
+                </View>
+              </Marker>
+            )}
+          </MapView>
+
+          <View className="px-4 py-3 bg-white border-t border-[#E8EAF0]">
+            {tempPin ? (
+              <View className="flex-row items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-[#DCFCE7]">
+                <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+                <Text className="text-[12px] font-semibold text-[#16A34A] flex-1">
+                  Pin koyuldu: {tempPin.latitude.toFixed(5)}, {tempPin.longitude.toFixed(5)}
+                </Text>
+                <Pressable hitSlop={8} onPress={() => setTempPin(null)}>
+                  <Ionicons name="close-circle" size={18} color="#16A34A" />
+                </Pressable>
+              </View>
+            ) : (
+              <View className="flex-row items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-[#F5F6FA]">
+                <Ionicons name="hand-left-outline" size={16} color="#A0A5BA" />
+                <Text className="text-[12px] text-[#646982] flex-1">
+                  Konumu işaretlemek için haritaya uzun bas
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              onPress={confirmMapPin}
+              disabled={!tempPin}
+              activeOpacity={0.85}
+              className="py-3.5 rounded-2xl items-center justify-center"
+              style={{ backgroundColor: tempPin ? colors.primary.DEFAULT : "#E8EAF0" }}
+            >
+              <Text
+                className="text-[15px] font-bold"
+                style={{ color: tempPin ? "#fff" : "#A0A5BA" }}
+              >
+                Onayla
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );

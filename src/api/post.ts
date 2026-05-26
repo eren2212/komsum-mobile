@@ -44,6 +44,9 @@ export interface DtoPost {
   commentCount: number;
   likedByMe: boolean;
   createdAt: string;
+  /** Yalnızca SPONSORED postlarda dolu: esnafın dükkan konumu (harita pini) */
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface DtoToggleLike {
@@ -76,11 +79,28 @@ export const postApi = {
       .get<RootEntity<DtoPost>>(`/api/posts/${postId}`)
       .then((res) => unwrap(res.data)),
 
-  /** GET /api/posts/feed – Mahalle akışı (type verilirse filtreli) */
-  getFeed: (pageNo = 0, pageSize = 10, type?: PostType): Promise<PageResponse<DtoPost>> =>
+  /**
+   * GET /api/posts/feed – Mahalle akışı (type verilirse filtreli).
+   * type=SPONSORED + lat/lng verilirse esnaf postları radius (metre) bazlı yakınlığa göre gelir;
+   * aksi halde mahalle bazlı davranış korunur (lat/lng/radius opsiyonel).
+   */
+  getFeed: (
+    pageNo = 0,
+    pageSize = 10,
+    type?: PostType,
+    lat?: number,
+    lng?: number,
+    radius = 5000,
+  ): Promise<PageResponse<DtoPost>> =>
     apiClient
       .get<RootEntity<PageResponse<DtoPost>>>("/api/posts/feed", {
-        params: { pageNo, pageSize, ...(type ? { type } : {}) },
+        params: {
+          pageNo,
+          pageSize,
+          radius,
+          ...(type ? { type } : {}),
+          ...(lat != null && lng != null ? { lat, lng } : {}),
+        },
       })
       .then((res) => unwrap(res.data)),
 
