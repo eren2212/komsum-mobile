@@ -3,13 +3,12 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,7 +19,12 @@ import { Image } from "expo-image";
 import { userApi, DtoUserUpdate } from "@/api/user";
 import { uploadApi } from "@/api/upload";
 import { colors } from "@/theme/color";
-import { BackButton, CustomButton, CustomInput, SkeletonBox } from "@/components";
+import {
+  BackButton,
+  CustomButton,
+  CustomInput,
+  SkeletonBox,
+} from "@/components";
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
@@ -43,14 +47,24 @@ function ProfileEditSkeleton() {
       >
         {/* Avatar */}
         <View className="items-center mb-8">
-          <SkeletonBox width={96} height={96} borderRadius={48} style={{ marginBottom: 12 }} />
+          <SkeletonBox
+            width={96}
+            height={96}
+            borderRadius={48}
+            style={{ marginBottom: 12 }}
+          />
           <SkeletonBox width={160} height={16} borderRadius={8} />
         </View>
 
         {/* Input skeletons */}
         {[1, 2, 3].map((i) => (
           <View key={i} className="mb-5">
-            <SkeletonBox width={80} height={13} borderRadius={6} style={{ marginBottom: 8 }} />
+            <SkeletonBox
+              width={80}
+              height={13}
+              borderRadius={6}
+              style={{ marginBottom: 8 }}
+            />
             <SkeletonBox width={inputW} height={62} borderRadius={16} />
           </View>
         ))}
@@ -154,7 +168,11 @@ function AvatarSection({
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={onChangePress} disabled={isUploading} activeOpacity={0.7}>
+      <TouchableOpacity
+        onPress={onChangePress}
+        disabled={isUploading}
+        activeOpacity={0.7}
+      >
         <Text className="text-primary text-sm font-medium">
           {isUploading ? "Yükleniyor..." : "Profil Fotoğrafını Değiştir"}
         </Text>
@@ -190,7 +208,11 @@ export default function ProfileEditScreen() {
   const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
-  const { mutate: updateProfile, isPending, error } = useMutation({
+  const {
+    mutate: updateProfile,
+    isPending,
+    error,
+  } = useMutation({
     mutationFn: (payload: DtoUserUpdate) => userApi.updateProfile(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["me", "profile"] });
@@ -206,7 +228,10 @@ export default function ProfileEditScreen() {
       try {
         finalAvatarUrl = await uploadApi.uploadAvatar(localAvatarUri);
       } catch {
-        Alert.alert("Hata", "Profil fotoğrafı yüklenirken sorun oluştu, tekrar dene.");
+        Alert.alert(
+          "Hata",
+          "Profil fotoğrafı yüklenirken sorun oluştu, tekrar dene.",
+        );
         setIsUploadingAvatar(false);
         return;
       }
@@ -227,7 +252,7 @@ export default function ProfileEditScreen() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -243,7 +268,7 @@ export default function ProfileEditScreen() {
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -276,134 +301,138 @@ export default function ProfileEditScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-neutral-50">
-      <KeyboardAvoidingView
+      {/* ── Header ── */}
+      <View className="flex-row items-center justify-between px-6 pt-4 pb-6">
+        <BackButton />
+
+        <Text className="text-neutral-600 text-[17px] font-bold">
+          Profili Düzenle
+        </Text>
+
+        {/* Sağ tarafı dengele */}
+        <View style={{ width: 40 }} />
+      </View>
+
+      {/* ── İçerik ── */}
+      <KeyboardAwareScrollView
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={24}
       >
-        {/* ── Header ── */}
-        <View className="flex-row items-center justify-between px-6 pt-4 pb-6">
-          <BackButton />
+        {/* Avatar */}
+        <AvatarSection
+          avatarUrl={localAvatarUri || avatarUrl || profile.avatarUrl}
+          initials={initials}
+          isUploading={isUploadingAvatar}
+          onChangePress={onChangeAvatar}
+        />
 
-          <Text className="text-neutral-600 text-[17px] font-bold">
-            Profili Düzenle
-          </Text>
-
-          {/* Sağ tarafı dengele */}
-          <View style={{ width: 40 }} />
-        </View>
-
-        {/* ── İçerik ── */}
-        <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Avatar */}
-          <AvatarSection
-            avatarUrl={localAvatarUri || avatarUrl || profile.avatarUrl}
-            initials={initials}
-            isUploading={isUploadingAvatar}
-            onChangePress={onChangeAvatar}
-          />
-
-          {/* Ad */}
-          <View className="mb-4">
-            <CustomInput
-              label="Ad"
-              value={firstname}
-              onChangeText={setFirstname}
-              placeholder="Adınız"
-              autoCapitalize="words"
-              leftIcon={
-                <Ionicons name="person-outline" size={18} color="#A0A5BA" />
-              }
-            />
-          </View>
-
-          {/* Soy Ad */}
-          <View className="mb-4">
-            <CustomInput
-              label="Soy Ad"
-              value={lastname}
-              onChangeText={setLastname}
-              placeholder="Soyadınız"
-              autoCapitalize="words"
-              leftIcon={
-                <Ionicons name="person-outline" size={18} color="#A0A5BA" />
-              }
-            />
-          </View>
-
-          {/* E-posta — salt okunur */}
-          <View className="mb-4">
-            <CustomInput
-              label="E-posta Adresi"
-              value={profile.email}
-              editable={false}
-              disabled
-              keyboardType="email-address"
-              autoCapitalize="none"
-              hint="E-posta adresi güvenlik nedeniyle değiştirilemez."
-              leftIcon={
-                <Ionicons name="mail-outline" size={18} color="#A0A5BA" />
-              }
-              rightIcon={
-                <Ionicons name="lock-closed-outline" size={16} color="#A0A5BA" />
-              }
-            />
-          </View>
-
-          {/* Şifre Değiştir — navigasyon satırı */}
-          <TouchableOpacity
-            onPress={() => router.push("/profile/profile-password")}
-            activeOpacity={0.7}
-            className="flex-row items-center h-[62px] rounded-2xl px-4 bg-white border border-neutral-100 mb-4"
-          >
-            <View
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
-                backgroundColor: "#FFF1EE",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: 12,
-              }}
-            >
-              <Ionicons name="lock-closed" size={16} color={colors.primary.DEFAULT} />
-            </View>
-
-            <Text className="flex-1 text-neutral-600 text-sm font-medium">
-              Şifre Değiştir
-            </Text>
-
-            <Ionicons name="chevron-forward" size={16} color="#A0A5BA" />
-          </TouchableOpacity>
-
-          {/* Hata mesajı */}
-          {error ? (
-            <Text className="text-error text-xs mt-1 ml-1">
-              {(error as Error).message}
-            </Text>
-          ) : null}
-        </ScrollView>
-
-        {/* ── Kaydet butonu ── */}
-        <View className="px-6 pb-8 pt-2">
-          <CustomButton
-            label="Değişiklikleri Kaydet"
-            onPress={onSave}
-            loading={isPending}
-            activeOpacity={0.8}
-            disabled={isPending || !isChanged || isUploadingAvatar}
-            fullWidth
-            rightIcon={
-              <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />
+        {/* Ad */}
+        <View className="mb-4">
+          <CustomInput
+            label="Ad"
+            value={firstname}
+            onChangeText={setFirstname}
+            placeholder="Adınız"
+            autoCapitalize="words"
+            leftIcon={
+              <Ionicons name="person-outline" size={18} color="#A0A5BA" />
             }
           />
         </View>
-      </KeyboardAvoidingView>
+
+        {/* Soy Ad */}
+        <View className="mb-4">
+          <CustomInput
+            label="Soy Ad"
+            value={lastname}
+            onChangeText={setLastname}
+            placeholder="Soyadınız"
+            autoCapitalize="words"
+            leftIcon={
+              <Ionicons name="person-outline" size={18} color="#A0A5BA" />
+            }
+          />
+        </View>
+
+        {/* E-posta — salt okunur */}
+        <View className="mb-4">
+          <CustomInput
+            label="E-posta Adresi"
+            value={profile.email}
+            editable={false}
+            disabled
+            keyboardType="email-address"
+            autoCapitalize="none"
+            hint="E-posta adresi güvenlik nedeniyle değiştirilemez."
+            leftIcon={
+              <Ionicons name="mail-outline" size={18} color="#A0A5BA" />
+            }
+            rightIcon={
+              <Ionicons name="lock-closed-outline" size={16} color="#A0A5BA" />
+            }
+          />
+        </View>
+
+        {/* Şifre Değiştir — navigasyon satırı */}
+        <TouchableOpacity
+          onPress={() => router.push("/profile/profile-password")}
+          activeOpacity={0.7}
+          className="flex-row items-center h-[62px] rounded-2xl px-4 bg-white border border-neutral-100 mb-4"
+        >
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              backgroundColor: "#FFF1EE",
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 12,
+            }}
+          >
+            <Ionicons
+              name="lock-closed"
+              size={16}
+              color={colors.primary.DEFAULT}
+            />
+          </View>
+
+          <Text className="flex-1 text-neutral-600 text-sm font-medium">
+            Şifre Değiştir
+          </Text>
+
+          <Ionicons name="chevron-forward" size={16} color="#A0A5BA" />
+        </TouchableOpacity>
+
+        {/* Hata mesajı */}
+        {error ? (
+          <Text className="text-error text-xs mt-1 ml-1">
+            {(error as Error).message}
+          </Text>
+        ) : null}
+      </KeyboardAwareScrollView>
+
+      {/* ── Kaydet butonu ── */}
+      <View className="px-6 pb-8 pt-2">
+        <CustomButton
+          label="Değişiklikleri Kaydet"
+          onPress={onSave}
+          loading={isPending}
+          activeOpacity={0.8}
+          disabled={isPending || !isChanged || isUploadingAvatar}
+          fullWidth
+          rightIcon={
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={20}
+              color="#FFFFFF"
+            />
+          }
+        />
+      </View>
     </SafeAreaView>
   );
 }

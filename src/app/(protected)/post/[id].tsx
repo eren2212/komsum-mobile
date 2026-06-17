@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAvoidingView as KCKeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -673,9 +674,9 @@ export default function PostDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      <KCKeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior="padding"
         keyboardVerticalOffset={0}
       >
         <View style={{ flex: 1 }}>
@@ -783,7 +784,7 @@ export default function PostDetailScreen() {
           </View>
         </View>
         </View>
-      </KeyboardAvoidingView>
+      </KCKeyboardAvoidingView>
     </SafeAreaView>
   );
 }

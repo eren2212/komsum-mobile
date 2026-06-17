@@ -1,13 +1,6 @@
 import React, { useEffect } from "react";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, Text, TouchableOpacity, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { create } from "zustand";
@@ -27,7 +20,7 @@ interface ResetFormState {
   confirmNewPasswordError: string;
   setField: (
     field: "otp" | "newPassword" | "confirmNewPassword",
-    value: string
+    value: string,
   ) => void;
   validate: () => boolean;
   reset: () => void;
@@ -146,100 +139,96 @@ export default function ResetPasswordScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-secondary-900" edges={["top"]}>
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      {/* ── Dark header ── */}
+      <View className="px-6 pt-3 pb-10 overflow-hidden">
+        <BgAsset
+          width="140%"
+          height="100%"
+          style={{ position: "absolute", top: -10, left: -70 }}
+          preserveAspectRatio="xMidYMid slice"
+        />
+
+        <BackButton />
+
+        <Text className="text-white text-[30px] font-bold text-center mt-5">
+          Şifre Sıfırla
+        </Text>
+
+        <Text className="text-white text-base text-center mt-2 opacity-85">
+          {email
+            ? `${email} adresine gönderilen kodu gir.`
+            : "E-postana gelen kodu ve yeni şifreni gir."}
+        </Text>
+      </View>
+
+      {/* ── Beyaz kart ── */}
+      <KeyboardAwareScrollView
+        className="flex-1 bg-white rounded-tl-xl3 rounded-tr-xl3"
+        contentContainerStyle={{ padding: 24, paddingBottom: 48 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bottomOffset={24}
       >
-        {/* ── Dark header ── */}
-        <View className="px-6 pt-3 pb-10 overflow-hidden">
-          <BgAsset
-            width="140%"
-            height="100%"
-            style={{ position: "absolute", top: -10, left: -70 }}
-            preserveAspectRatio="xMidYMid slice"
+        <View className="gap-4">
+          {/* Doğrulama kodu */}
+          <CustomInput
+            label="DOĞRULAMA KODU"
+            placeholder="123456"
+            value={otp}
+            onChangeText={(v) => setField("otp", v)}
+            error={otpError}
+            keyboardType="number-pad"
+            maxLength={6}
+            returnKeyType="next"
           />
 
-          <BackButton />
+          {/* Yeni şifre */}
+          <CustomInput
+            label="YENİ ŞİFRE"
+            placeholder="••••••••"
+            value={newPassword}
+            onChangeText={(v) => setField("newPassword", v)}
+            error={newPasswordError}
+            isPassword
+            returnKeyType="next"
+          />
 
-          <Text className="text-white text-[30px] font-bold text-center mt-5">
-            Şifre Sıfırla
-          </Text>
-
-          <Text className="text-white text-base text-center mt-2 opacity-85">
-            {email
-              ? `${email} adresine gönderilen kodu gir.`
-              : "E-postana gelen kodu ve yeni şifreni gir."}
-          </Text>
+          {/* Yeni şifre tekrar */}
+          <CustomInput
+            label="YENİ ŞİFRE TEKRAR"
+            placeholder="••••••••"
+            value={confirmNewPassword}
+            onChangeText={(v) => setField("confirmNewPassword", v)}
+            error={confirmNewPasswordError}
+            isPassword
+            returnKeyType="done"
+            onSubmitEditing={handleReset}
+          />
         </View>
 
-        {/* ── Beyaz kart ── */}
-        <ScrollView
-          className="flex-1 bg-white rounded-tl-xl3 rounded-tr-xl3"
-          contentContainerStyle={{ padding: 24, paddingBottom: 48 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View className="gap-4">
-            {/* Doğrulama kodu */}
-            <CustomInput
-              label="DOĞRULAMA KODU"
-              placeholder="123456"
-              value={otp}
-              onChangeText={(v) => setField("otp", v)}
-              error={otpError}
-              keyboardType="number-pad"
-              maxLength={6}
-              returnKeyType="next"
-            />
+        {/* Kodu tekrar gönder */}
+        <View className="flex-row justify-end mt-3">
+          <TouchableOpacity
+            onPress={handleResend}
+            activeOpacity={0.7}
+            disabled={isLoading}
+          >
+            <Text className="text-primary text-sm font-bold">
+              Kodu Tekrar Gönder
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-            {/* Yeni şifre */}
-            <CustomInput
-              label="YENİ ŞİFRE"
-              placeholder="••••••••"
-              value={newPassword}
-              onChangeText={(v) => setField("newPassword", v)}
-              error={newPasswordError}
-              isPassword
-              returnKeyType="next"
-            />
-
-            {/* Yeni şifre tekrar */}
-            <CustomInput
-              label="YENİ ŞİFRE TEKRAR"
-              placeholder="••••••••"
-              value={confirmNewPassword}
-              onChangeText={(v) => setField("confirmNewPassword", v)}
-              error={confirmNewPasswordError}
-              isPassword
-              returnKeyType="done"
-              onSubmitEditing={handleReset}
-            />
-          </View>
-
-          {/* Kodu tekrar gönder */}
-          <View className="flex-row justify-end mt-3">
-            <TouchableOpacity
-              onPress={handleResend}
-              activeOpacity={0.7}
-              disabled={isLoading}
-            >
-              <Text className="text-primary text-sm font-bold">
-                Kodu Tekrar Gönder
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Şifreyi Güncelle butonu */}
-          <View className="mt-6">
-            <CustomButton
-              label="ŞİFREYİ GÜNCELLE"
-              fullWidth
-              loading={isLoading}
-              onPress={handleReset}
-            />
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        {/* Şifreyi Güncelle butonu */}
+        <View className="mt-6">
+          <CustomButton
+            label="ŞİFREYİ GÜNCELLE"
+            fullWidth
+            loading={isLoading}
+            onPress={handleReset}
+          />
+        </View>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

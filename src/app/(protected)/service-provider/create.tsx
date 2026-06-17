@@ -8,6 +8,7 @@ import {
   FlatList,
   Platform,
   Pressable,
+  Switch,
   Alert,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
@@ -22,7 +23,14 @@ import MapView, {
 } from "react-native-maps";
 import * as Location from "expo-location";
 
-import { merchantApi, DtoCreateMerchant } from "@/api/merchant";
+import {
+  serviceProviderApi,
+  DtoCreateServiceProvider,
+  ServiceCategory,
+  SERVICE_CATEGORIES,
+  SERVICE_CATEGORY_LABELS,
+  SERVICE_CATEGORY_ICONS,
+} from "@/api/serviceProvider";
 import { colors } from "@/theme/color";
 import { BackButton, CustomInput, CustomButton } from "@/components";
 
@@ -31,30 +39,13 @@ const DEFAULT_REGION = { latitude: 41.015137, longitude: 28.97953 };
 
 type Pin = { latitude: number; longitude: number };
 
-// ─── Sabit değerler ──────────────────────────────────────────────────────────
-
-const CATEGORIES = [
-  "Restoran",
-  "Kafe",
-  "Market / Bakkal",
-  "Fırın / Pastane",
-  "Berber / Kuaför",
-  "Eczane",
-  "Elektronik",
-  "Giyim / Tekstil",
-  "Temizlik",
-  "Spor",
-  "Sağlık",
-  "Çiçekçi",
-  "Hizmet",
-  "Diğer",
-];
-
 // ─── Tipler ───────────────────────────────────────────────────────────────────
 
 type FormData = {
-  shopName: string;
-  category: string;
+  title: string;
+  category: ServiceCategory | "";
+  experienceYears: string; // input string → submit'te number
+  priceInfo: string;
   phone: string;
   address: string;
   description: string;
@@ -73,16 +64,14 @@ function StepDots({ current }: { current: 1 | 2 }) {
           className={`h-[6px] rounded-[3px] ${
             s === current ? "w-[20px]" : "w-[6px] bg-[#E2E8F0]"
           }`}
-          style={
-            s === current ? { backgroundColor: colors.primary.DEFAULT } : {}
-          }
+          style={s === current ? { backgroundColor: colors.primary.DEFAULT } : {}}
         />
       ))}
     </View>
   );
 }
 
-// ─── Adım 1: Mağaza bilgileri ─────────────────────────────────────────────────
+// ─── Adım 1: Hizmet bilgileri ─────────────────────────────────────────────────
 
 function Step1Content({
   form,
@@ -97,33 +86,14 @@ function Step1Content({
 }) {
   return (
     <View className="px-6 pt-4">
-      {/* Kapak fotoğrafı alanı */}
-      {/* <View className="h-[190px] w-full rounded-xl overflow-hidden mb-6">
-        <View className="flex-1 items-center justify-center bg-[#F0F5FA]">
-          <View className="w-[64px] h-[64px] rounded-full bg-[rgba(255,107,74,0.12)] items-center justify-center mb-3">
-            <Ionicons
-              name="image-outline"
-              size={30}
-              color={colors.primary.DEFAULT}
-            />
-          </View>
-          <Text className="text-[16px] font-semibold text-[#0F172A] mb-1">
-            Kapak Fotoğrafı
-          </Text>
-          <Text className="text-[13px] text-[#94A3B8] text-center">
-            Müşterilerinizi etkileyecek bir görsel seçin
-          </Text>
-        </View>
-      </View> */}
-
-      {/* Mağaza adı */}
+      {/* Başlık */}
       <View className="mb-5">
         <CustomInput
-          label="Mağaza Adı"
-          placeholder="örn. Meram Etli Ekmek Salonu"
-          value={form.shopName}
-          onChangeText={(v) => onUpdate("shopName", v)}
-          error={errors.shopName}
+          label="Başlık"
+          placeholder="örn. Matematik Öğretmeni"
+          value={form.title}
+          onChangeText={(v) => onUpdate("title", v)}
+          error={errors.title}
           autoCapitalize="words"
           returnKeyType="next"
         />
@@ -132,7 +102,7 @@ function Step1Content({
       {/* Kategori seçici */}
       <View className="mb-5">
         <Text className="text-[13px] font-normal uppercase text-neutral-600 mb-2 tracking-wide">
-          Kategori
+          Meslek
         </Text>
         <TouchableOpacity
           onPress={onCategoryPress}
@@ -141,13 +111,19 @@ function Step1Content({
             errors.category ? "border-[#EF4444]" : "border-[#E8EAF0]"
           }`}
         >
-          <Ionicons name="grid-outline" size={18} color="#A0A5BA" />
+          <Ionicons
+            name={form.category ? SERVICE_CATEGORY_ICONS[form.category] : "briefcase-outline"}
+            size={18}
+            color={form.category ? colors.primary.DEFAULT : "#A0A5BA"}
+          />
           <Text
             className={`flex-1 text-[14px] ${
               form.category ? "text-[#32343E]" : "text-[#A0A5BA]"
             }`}
           >
-            {form.category || "Kategori seçin..."}
+            {form.category
+              ? SERVICE_CATEGORY_LABELS[form.category]
+              : "Meslek seçin..."}
           </Text>
           <Ionicons name="chevron-expand" size={18} color="#A0A5BA" />
         </TouchableOpacity>
@@ -157,16 +133,49 @@ function Step1Content({
           </Text>
         )}
       </View>
+
+      {/* Deneyim yılı */}
+      <View className="mb-5">
+        <CustomInput
+          label="Deneyim Yılı (İsteğe Bağlı)"
+          placeholder="örn. 8"
+          value={form.experienceYears}
+          onChangeText={(v) =>
+            onUpdate("experienceYears", v.replace(/[^0-9]/g, ""))
+          }
+          error={errors.experienceYears}
+          keyboardType="number-pad"
+          returnKeyType="next"
+          leftIcon={<Ionicons name="time-outline" size={18} color="#A0A5BA" />}
+        />
+      </View>
+
+      {/* Ücret bilgisi */}
+      <View className="mb-5">
+        <CustomInput
+          label="Ücret Bilgisi (İsteğe Bağlı)"
+          placeholder="örn. 500₺/saat veya Pazarlığa açık"
+          value={form.priceInfo}
+          onChangeText={(v) => onUpdate("priceInfo", v)}
+          autoCapitalize="sentences"
+          returnKeyType="next"
+          leftIcon={
+            <Ionicons name="pricetag-outline" size={18} color="#A0A5BA" />
+          }
+        />
+      </View>
     </View>
   );
 }
 
-// ─── Adım 2: İletişim bilgileri ───────────────────────────────────────────────
+// ─── Adım 2: İletişim & Konum ─────────────────────────────────────────────────
 
 function Step2Content({
   form,
   errors,
   onUpdate,
+  available,
+  onToggleAvailable,
   pin,
   pinError,
   locating,
@@ -176,6 +185,8 @@ function Step2Content({
   form: FormData;
   errors: FormErrors;
   onUpdate: (key: keyof FormData, value: string) => void;
+  available: boolean;
+  onToggleAvailable: (v: boolean) => void;
   pin: Pin | null;
   pinError?: string;
   locating: boolean;
@@ -201,7 +212,7 @@ function Step2Content({
       {/* Adres */}
       <View className="mb-5">
         <CustomInput
-          label="Adres"
+          label="Adres / Hizmet Bölgesi"
           placeholder="Açık adresinizi girin..."
           value={form.address}
           onChangeText={(v) => onUpdate("address", v)}
@@ -214,10 +225,10 @@ function Step2Content({
         />
       </View>
 
-      {/* Dükkan Konumu (harita) — backend zorunlu kılıyor */}
+      {/* Konum (harita) — backend zorunlu kılıyor */}
       <View className="mb-5">
         <Text className="text-[13px] font-normal uppercase text-neutral-600 mb-2 tracking-wide">
-          Dükkan Konumu
+          Konum
         </Text>
 
         {pin ? (
@@ -274,11 +285,36 @@ function Step2Content({
         ) : null}
       </View>
 
+      {/* Müsaitlik durumu */}
+      <View className="mb-5 flex-row items-center justify-between rounded-[16px] px-4 py-3.5 bg-[#F5F6FA] border border-[#E8EAF0]">
+        <View className="flex-row items-center gap-3 flex-1">
+          <Ionicons
+            name="checkmark-done-circle-outline"
+            size={20}
+            color={available ? colors.primary.DEFAULT : "#A0A5BA"}
+          />
+          <View className="flex-1">
+            <Text className="text-[14px] font-semibold text-[#32343E]">
+              Şu an iş alıyorum
+            </Text>
+            <Text className="text-[11px] text-neutral-400">
+              Kapalıyken rehberde "müsait değil" görünürsün.
+            </Text>
+          </View>
+        </View>
+        <Switch
+          value={available}
+          onValueChange={onToggleAvailable}
+          trackColor={{ false: "#E8EAF0", true: colors.primary.light }}
+          thumbColor={available ? colors.primary.DEFAULT : "#f4f3f4"}
+        />
+      </View>
+
       {/* Açıklama (isteğe bağlı) */}
       <View className="mb-5">
         <CustomInput
           label="Açıklama (İsteğe Bağlı)"
-          placeholder="İşletmenizi kısaca tanıtın..."
+          placeholder="Verdiğin hizmeti kısaca tanıt..."
           value={form.description}
           onChangeText={(v) => onUpdate("description", v)}
           autoCapitalize="sentences"
@@ -308,22 +344,25 @@ function Step2Content({
 
 // ─── Ana Ekran ────────────────────────────────────────────────────────────────
 
-export default function MerchantCreateScreen() {
+export default function ServiceProviderCreateScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<1 | 2>(1);
   const [form, setForm] = useState<FormData>({
-    shopName: "",
+    title: "",
     category: "",
+    experienceYears: "",
+    priceInfo: "",
     phone: "",
     address: "",
     description: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
+  const [available, setAvailable] = useState(true);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
 
-  // ── Konum (dükkan koordinatı) state ──
+  // ── Konum state ──
   const [pin, setPin] = useState<Pin | null>(null);
   const [pinError, setPinError] = useState<string | undefined>(undefined);
   const [locating, setLocating] = useState(false);
@@ -331,14 +370,14 @@ export default function MerchantCreateScreen() {
   const [tempPin, setTempPin] = useState<Pin | null>(null);
 
   const { mutate: createProfile, isPending } = useMutation({
-    mutationFn: (data: DtoCreateMerchant) =>
-      merchantApi.createMerchantProfile(data),
+    mutationFn: (data: DtoCreateServiceProvider) =>
+      serviceProviderApi.createServiceProviderProfile(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["myMerchantProfile"] });
-      queryClient.invalidateQueries({ queryKey: ["merchantDirectory"] });
+      queryClient.invalidateQueries({ queryKey: ["myServiceProviderProfile"] });
+      queryClient.invalidateQueries({ queryKey: ["serviceProviderNearby"] });
       Alert.alert(
         "Profil Oluşturuldu",
-        "Esnaf profiliniz oluşturuldu ve onay sürecine alındı.",
+        "Usta profiliniz oluşturuldu ve onay sürecine alındı.",
         [{ text: "Tamam", onPress: () => router.back() }],
       );
     },
@@ -354,8 +393,8 @@ export default function MerchantCreateScreen() {
 
   const validateStep1 = (): boolean => {
     const errs: FormErrors = {};
-    if (!form.shopName.trim()) errs.shopName = "Mağaza adı boş olamaz.";
-    if (!form.category) errs.category = "Lütfen bir kategori seçin.";
+    if (!form.title.trim()) errs.title = "Başlık boş olamaz.";
+    if (!form.category) errs.category = "Lütfen bir meslek seçin.";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -369,7 +408,7 @@ export default function MerchantCreateScreen() {
     const geoMissing = !pin;
     setPinError(
       geoMissing
-        ? "Dükkanının konumunu haritadan seç veya 'Konumum'a bas."
+        ? "Konumunu haritadan seç veya 'Konumum'a bas."
         : undefined,
     );
 
@@ -403,7 +442,7 @@ export default function MerchantCreateScreen() {
       if (status !== "granted") {
         Alert.alert(
           "Konum İzni Gerekli",
-          "Dükkanını mevcut konumuna işaretlemek için konum iznine ihtiyaç var. Haritadan da elle seçebilirsin.",
+          "Konumunu işaretlemek için konum iznine ihtiyaç var. Haritadan da elle seçebilirsin.",
         );
         return;
       }
@@ -416,10 +455,7 @@ export default function MerchantCreateScreen() {
       });
       setPinError(undefined);
     } catch {
-      Alert.alert(
-        "Konum Alınamadı",
-        "Konum alınamadı. Lütfen haritadan elle seç.",
-      );
+      Alert.alert("Konum Alınamadı", "Konum alınamadı. Lütfen haritadan elle seç.");
     } finally {
       setLocating(false);
     }
@@ -443,12 +479,18 @@ export default function MerchantCreateScreen() {
 
   const handleSubmit = () => {
     if (!validateStep2()) return;
+    const years = form.experienceYears.trim()
+      ? Number(form.experienceYears)
+      : undefined;
     createProfile({
-      shopName: form.shopName.trim(),
-      category: form.category,
+      title: form.title.trim(),
+      category: form.category as ServiceCategory,
       phone: form.phone.trim(),
       address: form.address.trim(),
       description: form.description.trim() || undefined,
+      experienceYears: years,
+      priceInfo: form.priceInfo.trim() || undefined,
+      available,
       latitude: pin!.latitude,
       longitude: pin!.longitude,
     });
@@ -456,14 +498,14 @@ export default function MerchantCreateScreen() {
 
   const stepHeadings = {
     1: {
-      title: "Mağazanızı Tanıtalım",
+      title: "Hizmetini Tanıtalım",
       subtitle:
-        "Müşterilerinizin sizi daha iyi tanıması için bilgilerinizi güncelleyin.",
+        "Komşuların seni kolayca bulabilmesi için mesleğini ve deneyimini gir.",
     },
     2: {
-      title: "İletişim Bilgileri",
+      title: "İletişim & Konum",
       subtitle:
-        "Müşterilerinizin size ulaşabilmesi için iletişim bilgilerini girin.",
+        "Komşuların sana ulaşabilmesi için iletişim ve konum bilgilerini gir.",
     },
   };
 
@@ -471,13 +513,11 @@ export default function MerchantCreateScreen() {
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       {/* ── Navigasyon Çubuğu ── */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-[#F1F5F9]">
-        {/* Geri butonu */}
         <BackButton onPress={handleBack} />
 
-        {/* Başlık ve adım */}
         <View className="items-center">
           <Text className="text-[17px] font-bold text-[#121223] tracking-[-0.4px]">
-            İşletme Profili
+            Usta Profili
           </Text>
           <Text
             className="text-[11px] font-bold tracking-[1.1px] uppercase mt-[2px]"
@@ -487,7 +527,6 @@ export default function MerchantCreateScreen() {
           </Text>
         </View>
 
-        {/* Adım göstergesi (sağ) */}
         <View className="w-[44px] items-center">
           <StepDots current={step} />
         </View>
@@ -500,7 +539,6 @@ export default function MerchantCreateScreen() {
         contentContainerStyle={{ paddingBottom: 140 }}
         bottomOffset={24}
       >
-        {/* Başlık metni */}
         <View className="px-6 pt-6 pb-2">
           <Text className="text-[24px] font-extrabold text-[#121223] tracking-[-0.6px] mb-1.5">
             {stepHeadings[step].title}
@@ -522,6 +560,8 @@ export default function MerchantCreateScreen() {
             form={form}
             errors={errors}
             onUpdate={update}
+            available={available}
+            onToggleAvailable={setAvailable}
             pin={pin}
             pinError={pinError}
             locating={locating}
@@ -572,10 +612,9 @@ export default function MerchantCreateScreen() {
           onPress={() => setCategoryModalVisible(false)}
         >
           <View className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[24px] overflow-hidden max-h-[70%]">
-            {/* Modal başlık */}
             <View className="flex-row items-center justify-between px-6 pt-5 pb-4 border-b border-[#F1F5F9]">
               <Text className="text-[16px] font-bold text-[#121223]">
-                Kategori Seçin
+                Meslek Seçin
               </Text>
               <TouchableOpacity
                 onPress={() => setCategoryModalVisible(false)}
@@ -587,7 +626,7 @@ export default function MerchantCreateScreen() {
             </View>
 
             <FlatList
-              data={CATEGORIES}
+              data={SERVICE_CATEGORIES}
               keyExtractor={(item) => item}
               showsVerticalScrollIndicator={false}
               renderItem={({ item }) => {
@@ -599,19 +638,22 @@ export default function MerchantCreateScreen() {
                       setCategoryModalVisible(false);
                     }}
                     activeOpacity={0.7}
-                    className={`flex-row items-center px-6 py-4 border-b border-[#F8FAFC] ${
+                    className={`flex-row items-center px-6 py-4 border-b border-[#F8FAFC] gap-3 ${
                       selected ? "bg-[#FFF1EE]" : "bg-white"
                     }`}
                   >
+                    <Ionicons
+                      name={SERVICE_CATEGORY_ICONS[item]}
+                      size={20}
+                      color={selected ? colors.primary.DEFAULT : "#A0A5BA"}
+                    />
                     <Text
                       className={`flex-1 text-[15px] ${
-                        selected
-                          ? "font-semibold"
-                          : "font-normal text-[#32343E]"
+                        selected ? "font-semibold" : "font-normal text-[#32343E]"
                       }`}
                       style={selected ? { color: colors.primary.DEFAULT } : {}}
                     >
-                      {item}
+                      {SERVICE_CATEGORY_LABELS[item]}
                     </Text>
                     {selected && (
                       <Ionicons
@@ -642,9 +684,7 @@ export default function MerchantCreateScreen() {
             >
               <Ionicons name="close" size={26} color="#32343E" />
             </TouchableOpacity>
-            <Text className="text-[16px] font-bold text-[#121223]">
-              Dükkan Konumu
-            </Text>
+            <Text className="text-[16px] font-bold text-[#121223]">Konum</Text>
             <View style={{ width: 26 }} />
           </View>
 
@@ -655,7 +695,7 @@ export default function MerchantCreateScreen() {
               color={colors.primary.DEFAULT}
             />
             <Text className="text-[12px] text-[#646982] flex-1">
-              Haritada uzun basarak dükkanının konumunu işaretle.
+              Haritada uzun basarak konumunu işaretle.
             </Text>
           </View>
 
@@ -686,7 +726,7 @@ export default function MerchantCreateScreen() {
                       elevation: 6,
                     }}
                   >
-                    <Ionicons name="storefront" size={20} color="#fff" />
+                    <Ionicons name="person" size={20} color="#fff" />
                   </View>
                   <View
                     style={{

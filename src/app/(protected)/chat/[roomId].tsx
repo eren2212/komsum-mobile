@@ -2,7 +2,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StatusBar,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -330,7 +330,7 @@ export default function ChatRoomScreen() {
       {/* İçerik Alanı — açık zemin */}
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: "#F0F2F8" }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
         keyboardVerticalOffset={0}
       >
         {isLoading ? (

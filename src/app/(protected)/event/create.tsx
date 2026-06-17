@@ -1,25 +1,28 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
-import MapView, { Marker, PROVIDER_GOOGLE, MapPressEvent } from "react-native-maps";
+import MapView, {
+  Marker,
+  PROVIDER_GOOGLE,
+  MapPressEvent,
+} from "react-native-maps";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
@@ -40,12 +43,48 @@ interface CategoryMeta {
 }
 
 const CATEGORIES: CategoryMeta[] = [
-  { key: "SPORTS",     label: "Spor",          icon: "football",                   color: "#0EA5E9", bg: "#E0F2FE" },
-  { key: "ARTS_MUSIC", label: "Sanat & Müzik", icon: "musical-notes",              color: "#8B5CF6", bg: "#EDE9FE" },
-  { key: "FOOD_DRINK", label: "Yeme & İçme",   icon: "restaurant",                 color: "#F59E0B", bg: "#FEF3C7" },
-  { key: "TRAVEL",     label: "Gezi",           icon: "compass",                    color: "#10B981", bg: "#D1FAE5" },
-  { key: "EDUCATION",  label: "Eğitim",         icon: "school",                     color: "#3B82F6", bg: "#DBEAFE" },
-  { key: "OTHER",      label: "Diğer",          icon: "ellipsis-horizontal-circle", color: "#6B7280", bg: "#F3F4F6" },
+  {
+    key: "SPORTS",
+    label: "Spor",
+    icon: "football",
+    color: "#0EA5E9",
+    bg: "#E0F2FE",
+  },
+  {
+    key: "ARTS_MUSIC",
+    label: "Sanat & Müzik",
+    icon: "musical-notes",
+    color: "#8B5CF6",
+    bg: "#EDE9FE",
+  },
+  {
+    key: "FOOD_DRINK",
+    label: "Yeme & İçme",
+    icon: "restaurant",
+    color: "#F59E0B",
+    bg: "#FEF3C7",
+  },
+  {
+    key: "TRAVEL",
+    label: "Gezi",
+    icon: "compass",
+    color: "#10B981",
+    bg: "#D1FAE5",
+  },
+  {
+    key: "EDUCATION",
+    label: "Eğitim",
+    icon: "school",
+    color: "#3B82F6",
+    bg: "#DBEAFE",
+  },
+  {
+    key: "OTHER",
+    label: "Diğer",
+    icon: "ellipsis-horizontal-circle",
+    color: "#6B7280",
+    bg: "#F3F4F6",
+  },
 ];
 
 // ─── Yardımcılar ──────────────────────────────────────────────────────────────
@@ -88,7 +127,6 @@ function SectionTitle({ icon, title }: { icon: string; title: string }) {
 export default function CreateEventScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const scrollRef = useRef<ScrollView>(null);
 
   // ── Form state ──
   const [title, setTitle] = useState("");
@@ -110,10 +148,16 @@ export default function CreateEventScreen() {
   const [androidTempDate, setAndroidTempDate] = useState<Date>(new Date());
 
   // ── Konum pin state ──
-  const [pin, setPin] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [pin, setPin] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   // Modal içinde gezerken geçici pin tutmak için (Tamam'a basınca asıl pin set edilir)
   const [mapVisible, setMapVisible] = useState(false);
-  const [tempPin, setTempPin] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [tempPin, setTempPin] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   // ── Mutation ──
   const { mutate: createEvent, isPending } = useMutation({
@@ -256,7 +300,10 @@ export default function CreateEventScreen() {
       return;
     }
     if (!pin) {
-      Alert.alert("Konum Seçilmedi", "Lütfen haritadan etkinlik konumunu işaretle.");
+      Alert.alert(
+        "Konum Seçilmedi",
+        "Lütfen haritadan etkinlik konumunu işaretle.",
+      );
       return;
     }
 
@@ -273,8 +320,8 @@ export default function CreateEventScreen() {
             [
               { text: "İptal", style: "cancel", onPress: () => resolve(false) },
               { text: "Fotoğrafsız Devam Et", onPress: () => resolve(true) },
-            ]
-          )
+            ],
+          ),
         );
         if (!proceed) {
           setIsUploadingImage(false);
@@ -331,7 +378,9 @@ export default function CreateEventScreen() {
           disabled={!canSubmit}
           activeOpacity={0.85}
           className="px-5 py-2 rounded-[20px]"
-          style={{ backgroundColor: canSubmit ? colors.primary.DEFAULT : "#E8EAF0" }}
+          style={{
+            backgroundColor: canSubmit ? colors.primary.DEFAULT : "#E8EAF0",
+          }}
         >
           {isLoading ? (
             <ActivityIndicator size="small" color="#fff" />
@@ -346,290 +395,312 @@ export default function CreateEventScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView
+      <KeyboardAwareScrollView
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingTop: 20,
+          paddingBottom: 40,
+        }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={24}
       >
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 40 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        {/* ── Kapak Fotoğrafı ── */}
+        <SectionTitle icon="image" title="Kapak Fotoğrafı" />
+        <TouchableOpacity
+          onPress={onPickImage}
+          activeOpacity={0.85}
+          className="w-full rounded-2xl overflow-hidden mb-6"
+          style={{ aspectRatio: 16 / 7 }}
         >
-          {/* ── Kapak Fotoğrafı ── */}
-          <SectionTitle icon="image" title="Kapak Fotoğrafı" />
-          <TouchableOpacity
-            onPress={onPickImage}
-            activeOpacity={0.85}
-            className="w-full rounded-2xl overflow-hidden mb-6"
-            style={{ aspectRatio: 16 / 7 }}
-          >
-            {imageUri ? (
-              <View className="flex-1 relative">
-                <Image
-                  source={{ uri: imageUri }}
-                  style={{ width: "100%", height: "100%" }}
-                  contentFit="cover"
-                />
-                <View className="absolute inset-0 bg-black/20 items-center justify-center">
-                  <View className="flex-row items-center gap-2 px-4 py-2 rounded-full bg-black/40">
-                    <Ionicons name="camera" size={16} color="#fff" />
-                    <Text className="text-white text-[13px] font-semibold">Değiştir</Text>
-                  </View>
-                </View>
-              </View>
-            ) : (
-              <View
-                className="flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#D1D5E0]"
-                style={{ backgroundColor: "#F5F6FA" }}
-              >
-                <View
-                  className="w-12 h-12 rounded-2xl items-center justify-center"
-                  style={{ backgroundColor: "#FFF1EE" }}
-                >
-                  <Ionicons name="camera-outline" size={24} color={colors.primary.DEFAULT} />
-                </View>
-                <Text className="text-[13px] font-semibold text-[#646982]">Fotoğraf Ekle</Text>
-                <Text className="text-[11px] text-[#A0A5BA]">İsteğe bağlı</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* ── Başlık ── */}
-          <SectionTitle icon="text" title="Başlık" />
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Etkinlik adını gir..."
-            placeholderTextColor="#A0A5BA"
-            maxLength={100}
-            className="text-[15px] text-[#32343E] px-4 py-3 rounded-2xl border border-[#E8EAF0] bg-[#F5F6FA] mb-6"
-            style={{ fontWeight: "500" }}
-          />
-
-          {/* ── Kategori ── */}
-          <SectionTitle icon="grid" title="Kategori" />
-          <View className="flex-row flex-wrap gap-2 mb-6">
-            {CATEGORIES.map((cat) => {
-              const selected = category === cat.key;
-              return (
-                <TouchableOpacity
-                  key={cat.key}
-                  onPress={() => setCategory(cat.key)}
-                  activeOpacity={0.8}
-                  className="flex-row items-center gap-2 px-3 py-2 rounded-[14px] border-[1.5px]"
-                  style={{
-                    borderColor: selected ? cat.color : "#E8EAF0",
-                    backgroundColor: selected ? cat.bg : "#F5F6FA",
-                  }}
-                >
-                  <Ionicons
-                    name={cat.icon as any}
-                    size={15}
-                    color={selected ? cat.color : "#A0A5BA"}
-                  />
-                  <Text
-                    className="text-[13px] font-semibold"
-                    style={{ color: selected ? cat.color : "#646982" }}
-                  >
-                    {cat.label}
+          {imageUri ? (
+            <View className="flex-1 relative">
+              <Image
+                source={{ uri: imageUri }}
+                style={{ width: "100%", height: "100%" }}
+                contentFit="cover"
+              />
+              <View className="absolute inset-0 bg-black/20 items-center justify-center">
+                <View className="flex-row items-center gap-2 px-4 py-2 rounded-full bg-black/40">
+                  <Ionicons name="camera" size={16} color="#fff" />
+                  <Text className="text-white text-[13px] font-semibold">
+                    Değiştir
                   </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* ── Tarih & Saat ── */}
-          <SectionTitle icon="calendar" title="Tarih & Saat" />
-
-          {/* Tetikleyici buton */}
-          <TouchableOpacity
-            onPress={openDatePicker}
-            activeOpacity={0.8}
-            className="flex-row items-center px-4 py-3 rounded-2xl border mb-2"
-            style={{
-              borderColor: selectedDate ? colors.primary.DEFAULT : "#E8EAF0",
-              backgroundColor: selectedDate ? "#FFF1EE" : "#F5F6FA",
-            }}
-          >
-            <Ionicons
-              name="calendar-outline"
-              size={18}
-              color={selectedDate ? colors.primary.DEFAULT : "#A0A5BA"}
-              style={{ marginRight: 10 }}
-            />
-            <Text
-              className="flex-1 text-[15px]"
-              style={{
-                color: selectedDate ? "#32343E" : "#A0A5BA",
-                fontWeight: selectedDate ? "600" : "400",
-              }}
-            >
-              {selectedDate ? formatDateDisplay(selectedDate) : "Tarih ve saat seç..."}
-            </Text>
-            {selectedDate && (
-              <Pressable
-                hitSlop={8}
-                onPress={() => setSelectedDate(null)}
-              >
-                <Ionicons name="close-circle" size={18} color="#A0A5BA" />
-              </Pressable>
-            )}
-          </TouchableOpacity>
-
-          {/* iOS: inline spinner picker */}
-          {Platform.OS === "ios" && showIOSPicker && (
+                </View>
+              </View>
+            </View>
+          ) : (
             <View
-              className="rounded-2xl overflow-hidden border border-[#E8EAF0] mb-4"
+              className="flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#D1D5E0]"
               style={{ backgroundColor: "#F5F6FA" }}
             >
-              <DateTimePicker
-                value={iosPickerValue}
-                mode="datetime"
-                display="spinner"
-                minimumDate={minDate}
-                onChange={onIOSChange}
-                locale="tr"
-                textColor="#32343E"
-                style={{ height: 180 }}
-              />
-              {/* Onayla / İptal */}
-              <View className="flex-row border-t border-[#E8EAF0]">
-                <TouchableOpacity
-                  onPress={onIOSCancel}
-                  className="flex-1 py-3 items-center"
-                >
-                  <Text className="text-[14px] font-semibold text-[#A0A5BA]">İptal</Text>
-                </TouchableOpacity>
-                <View className="w-px bg-[#E8EAF0]" />
-                <TouchableOpacity
-                  onPress={onIOSConfirm}
-                  className="flex-1 py-3 items-center"
-                >
-                  <Text
-                    className="text-[14px] font-bold"
-                    style={{ color: colors.primary.DEFAULT }}
-                  >
-                    Tamam
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {/* Android: native dialog picker'lar */}
-          {Platform.OS === "android" && showAndroidDate && (
-            <DateTimePicker
-              value={androidTempDate}
-              mode="date"
-              display="default"
-              minimumDate={minDate}
-              onChange={onAndroidDateChange}
-              locale="tr"
-            />
-          )}
-          {Platform.OS === "android" && showAndroidTime && (
-            <DateTimePicker
-              value={androidTempDate}
-              mode="time"
-              display="default"
-              onChange={onAndroidTimeChange}
-              locale="tr"
-              is24Hour
-            />
-          )}
-
-          <Text className="text-[11px] text-[#A0A5BA] mb-6 ml-1">
-            {Platform.OS === "android"
-              ? "Önce tarih, ardından saat seçilecek"
-              : "Tarih ve saati seçmek için yukarıya dokun"}
-          </Text>
-
-          {/* ── Konum Metni ── */}
-          <SectionTitle icon="location" title="Konum Açıklaması" />
-          <View className="flex-row items-center border border-[#E8EAF0] bg-[#F5F6FA] rounded-2xl px-4 py-3 mb-6">
-            <Ionicons name="location-outline" size={18} color="#A0A5BA" style={{ marginRight: 8 }} />
-            <TextInput
-              value={location}
-              onChangeText={setLocation}
-              placeholder="Meydanı, parkı veya tam adresi yaz..."
-              placeholderTextColor="#A0A5BA"
-              className="flex-1 text-[15px] text-[#32343E]"
-              style={{ fontWeight: "500" }}
-            />
-          </View>
-
-          {/* ── Harita (Konum Seçici) ── */}
-          <SectionTitle icon="map" title="Haritadan Konum Seç" />
-          {pin && (
-            <View className="flex-row items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-[#DCFCE7]">
-              <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
-              <Text className="text-[12px] font-semibold text-[#16A34A] flex-1">
-                Konum seçildi: {pin.latitude.toFixed(5)}, {pin.longitude.toFixed(5)}
-              </Text>
-              <Pressable hitSlop={8} onPress={() => setPin(null)}>
-                <Ionicons name="close-circle" size={18} color="#16A34A" />
-              </Pressable>
-            </View>
-          )}
-          <Pressable
-            onPress={openMap}
-            className="flex-row items-center justify-between px-4 py-3 rounded-2xl border border-[#E8EAF0] bg-[#F5F6FA] mb-6"
-          >
-            <View className="flex-row items-center gap-2">
-              <Ionicons
-                name="map-outline"
-                size={18}
-                color={pin ? colors.primary.DEFAULT : "#646982"}
-              />
-              <Text
-                className="text-[13px] font-semibold"
-                style={{ color: pin ? colors.primary.DEFAULT : "#646982" }}
+              <View
+                className="w-12 h-12 rounded-2xl items-center justify-center"
+                style={{ backgroundColor: "#FFF1EE" }}
               >
-                {pin ? "Konumu Değiştir" : "Haritayı Aç"}
+                <Ionicons
+                  name="camera-outline"
+                  size={24}
+                  color={colors.primary.DEFAULT}
+                />
+              </View>
+              <Text className="text-[13px] font-semibold text-[#646982]">
+                Fotoğraf Ekle
               </Text>
+              <Text className="text-[11px] text-[#A0A5BA]">İsteğe bağlı</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#A0A5BA" />
-          </Pressable>
+          )}
+        </TouchableOpacity>
 
-          {/* ── Açıklama ── */}
-          <SectionTitle icon="document-text" title="Açıklama" />
-          <TextInput
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Etkinlik hakkında daha fazla bilgi ver... (isteğe bağlı)"
-            placeholderTextColor="#A0A5BA"
-            multiline
-            maxLength={1000}
-            className="text-[15px] text-[#32343E] px-4 py-3 rounded-2xl border border-[#E8EAF0] bg-[#F5F6FA] mb-6 min-h-[100px]"
-            style={{ textAlignVertical: "top", fontWeight: "500" }}
+        {/* ── Başlık ── */}
+        <SectionTitle icon="text" title="Başlık" />
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Etkinlik adını gir..."
+          placeholderTextColor="#A0A5BA"
+          maxLength={100}
+          className="text-[15px] text-[#32343E] px-4 py-3 rounded-2xl border border-[#E8EAF0] bg-[#F5F6FA] mb-6"
+          style={{ fontWeight: "500" }}
+        />
+
+        {/* ── Kategori ── */}
+        <SectionTitle icon="grid" title="Kategori" />
+        <View className="flex-row flex-wrap gap-2 mb-6">
+          {CATEGORIES.map((cat) => {
+            const selected = category === cat.key;
+            return (
+              <TouchableOpacity
+                key={cat.key}
+                onPress={() => setCategory(cat.key)}
+                activeOpacity={0.8}
+                className="flex-row items-center gap-2 px-3 py-2 rounded-[14px] border-[1.5px]"
+                style={{
+                  borderColor: selected ? cat.color : "#E8EAF0",
+                  backgroundColor: selected ? cat.bg : "#F5F6FA",
+                }}
+              >
+                <Ionicons
+                  name={cat.icon as any}
+                  size={15}
+                  color={selected ? cat.color : "#A0A5BA"}
+                />
+                <Text
+                  className="text-[13px] font-semibold"
+                  style={{ color: selected ? cat.color : "#646982" }}
+                >
+                  {cat.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* ── Tarih & Saat ── */}
+        <SectionTitle icon="calendar" title="Tarih & Saat" />
+
+        {/* Tetikleyici buton */}
+        <TouchableOpacity
+          onPress={openDatePicker}
+          activeOpacity={0.8}
+          className="flex-row items-center px-4 py-3 rounded-2xl border mb-2"
+          style={{
+            borderColor: selectedDate ? colors.primary.DEFAULT : "#E8EAF0",
+            backgroundColor: selectedDate ? "#FFF1EE" : "#F5F6FA",
+          }}
+        >
+          <Ionicons
+            name="calendar-outline"
+            size={18}
+            color={selectedDate ? colors.primary.DEFAULT : "#A0A5BA"}
+            style={{ marginRight: 10 }}
           />
+          <Text
+            className="flex-1 text-[15px]"
+            style={{
+              color: selectedDate ? "#32343E" : "#A0A5BA",
+              fontWeight: selectedDate ? "600" : "400",
+            }}
+          >
+            {selectedDate
+              ? formatDateDisplay(selectedDate)
+              : "Tarih ve saat seç..."}
+          </Text>
+          {selectedDate && (
+            <Pressable hitSlop={8} onPress={() => setSelectedDate(null)}>
+              <Ionicons name="close-circle" size={18} color="#A0A5BA" />
+            </Pressable>
+          )}
+        </TouchableOpacity>
 
-          {/* ── Fiyat Bilgisi ── */}
-          <SectionTitle icon="pricetag" title="Fiyat Bilgisi" />
-          <View className="flex-row items-center border border-[#E8EAF0] bg-[#F5F6FA] rounded-2xl px-4 py-3 mb-6">
-            <Ionicons name="pricetag-outline" size={18} color="#A0A5BA" style={{ marginRight: 8 }} />
-            <TextInput
-              value={priceText}
-              onChangeText={setPriceText}
-              placeholder="Ücretsiz veya fiyat bilgisi... (isteğe bağlı)"
-              placeholderTextColor="#A0A5BA"
-              className="flex-1 text-[15px] text-[#32343E]"
-              style={{ fontWeight: "500" }}
+        {/* iOS: inline spinner picker */}
+        {Platform.OS === "ios" && showIOSPicker && (
+          <View
+            className="rounded-2xl overflow-hidden border border-[#E8EAF0] mb-4"
+            style={{ backgroundColor: "#F5F6FA" }}
+          >
+            <DateTimePicker
+              value={iosPickerValue}
+              mode="datetime"
+              display="spinner"
+              minimumDate={minDate}
+              onChange={onIOSChange}
+              locale="tr"
+              textColor="#32343E"
+              style={{ height: 180 }}
             />
+            {/* Onayla / İptal */}
+            <View className="flex-row border-t border-[#E8EAF0]">
+              <TouchableOpacity
+                onPress={onIOSCancel}
+                className="flex-1 py-3 items-center"
+              >
+                <Text className="text-[14px] font-semibold text-[#A0A5BA]">
+                  İptal
+                </Text>
+              </TouchableOpacity>
+              <View className="w-px bg-[#E8EAF0]" />
+              <TouchableOpacity
+                onPress={onIOSConfirm}
+                className="flex-1 py-3 items-center"
+              >
+                <Text
+                  className="text-[14px] font-bold"
+                  style={{ color: colors.primary.DEFAULT }}
+                >
+                  Tamam
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
+        )}
 
-          {/* ── Mahalle Notu ── */}
-          <View className="flex-row items-center gap-2 px-4 py-3 rounded-2xl bg-[#FFF1EE] mb-2">
-            <Ionicons name="information-circle" size={18} color={colors.primary.DEFAULT} />
-            <Text className="text-[12px] text-[#646982] flex-1 leading-[18px]">
-              Etkinliğin mahalleye atanacak ve ilçendeki komşulara gösterilecek.
+        {/* Android: native dialog picker'lar */}
+        {Platform.OS === "android" && showAndroidDate && (
+          <DateTimePicker
+            value={androidTempDate}
+            mode="date"
+            display="default"
+            minimumDate={minDate}
+            onChange={onAndroidDateChange}
+            locale="tr"
+          />
+        )}
+        {Platform.OS === "android" && showAndroidTime && (
+          <DateTimePicker
+            value={androidTempDate}
+            mode="time"
+            display="default"
+            onChange={onAndroidTimeChange}
+            locale="tr"
+            is24Hour
+          />
+        )}
+
+        <Text className="text-[11px] text-[#A0A5BA] mb-6 ml-1">
+          {Platform.OS === "android"
+            ? "Önce tarih, ardından saat seçilecek"
+            : "Tarih ve saati seçmek için yukarıya dokun"}
+        </Text>
+
+        {/* ── Konum Metni ── */}
+        <SectionTitle icon="location" title="Konum Açıklaması" />
+        <View className="flex-row items-center border border-[#E8EAF0] bg-[#F5F6FA] rounded-2xl px-4 py-3 mb-6">
+          <Ionicons
+            name="location-outline"
+            size={18}
+            color="#A0A5BA"
+            style={{ marginRight: 8 }}
+          />
+          <TextInput
+            value={location}
+            onChangeText={setLocation}
+            placeholder="Meydanı, parkı veya tam adresi yaz..."
+            placeholderTextColor="#A0A5BA"
+            className="flex-1 text-[15px] text-[#32343E]"
+            style={{ fontWeight: "500" }}
+          />
+        </View>
+
+        {/* ── Harita (Konum Seçici) ── */}
+        <SectionTitle icon="map" title="Haritadan Konum Seç" />
+        {pin && (
+          <View className="flex-row items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-[#DCFCE7]">
+            <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+            <Text className="text-[12px] font-semibold text-[#16A34A] flex-1">
+              Konum seçildi: {pin.latitude.toFixed(5)},{" "}
+              {pin.longitude.toFixed(5)}
+            </Text>
+            <Pressable hitSlop={8} onPress={() => setPin(null)}>
+              <Ionicons name="close-circle" size={18} color="#16A34A" />
+            </Pressable>
+          </View>
+        )}
+        <Pressable
+          onPress={openMap}
+          className="flex-row items-center justify-between px-4 py-3 rounded-2xl border border-[#E8EAF0] bg-[#F5F6FA] mb-6"
+        >
+          <View className="flex-row items-center gap-2">
+            <Ionicons
+              name="map-outline"
+              size={18}
+              color={pin ? colors.primary.DEFAULT : "#646982"}
+            />
+            <Text
+              className="text-[13px] font-semibold"
+              style={{ color: pin ? colors.primary.DEFAULT : "#646982" }}
+            >
+              {pin ? "Konumu Değiştir" : "Haritayı Aç"}
             </Text>
           </View>
+          <Ionicons name="chevron-forward" size={18} color="#A0A5BA" />
+        </Pressable>
 
-        </ScrollView>
-      </KeyboardAvoidingView>
+        {/* ── Açıklama ── */}
+        <SectionTitle icon="document-text" title="Açıklama" />
+        <TextInput
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Etkinlik hakkında daha fazla bilgi ver... (isteğe bağlı)"
+          placeholderTextColor="#A0A5BA"
+          multiline
+          maxLength={1000}
+          className="text-[15px] text-[#32343E] px-4 py-3 rounded-2xl border border-[#E8EAF0] bg-[#F5F6FA] mb-6 min-h-[100px]"
+          style={{ textAlignVertical: "top", fontWeight: "500" }}
+        />
+
+        {/* ── Fiyat Bilgisi ── */}
+        <SectionTitle icon="pricetag" title="Fiyat Bilgisi" />
+        <View className="flex-row items-center border border-[#E8EAF0] bg-[#F5F6FA] rounded-2xl px-4 py-3 mb-6">
+          <Ionicons
+            name="pricetag-outline"
+            size={18}
+            color="#A0A5BA"
+            style={{ marginRight: 8 }}
+          />
+          <TextInput
+            value={priceText}
+            onChangeText={setPriceText}
+            placeholder="Ücretsiz veya fiyat bilgisi... (isteğe bağlı)"
+            placeholderTextColor="#A0A5BA"
+            className="flex-1 text-[15px] text-[#32343E]"
+            style={{ fontWeight: "500" }}
+          />
+        </View>
+
+        {/* ── Mahalle Notu ── */}
+        <View className="flex-row items-center gap-2 px-4 py-3 rounded-2xl bg-[#FFF1EE] mb-2">
+          <Ionicons
+            name="information-circle"
+            size={18}
+            color={colors.primary.DEFAULT}
+          />
+          <Text className="text-[12px] text-[#646982] flex-1 leading-[18px]">
+            Etkinliğin mahalleye atanacak ve ilçendeki komşulara gösterilecek.
+          </Text>
+        </View>
+      </KeyboardAwareScrollView>
 
       {/* ── Full-screen Harita Modal ── */}
       {/* MapView ScrollView içine konulamaz (gesture çakışması). Bu yüzden Modal'da
@@ -645,13 +716,19 @@ export default function CreateEventScreen() {
             <TouchableOpacity onPress={cancelMap} activeOpacity={0.7}>
               <Ionicons name="close" size={26} color="#32343E" />
             </TouchableOpacity>
-            <Text className="text-[16px] font-bold text-[#121223]">Konum Seç</Text>
+            <Text className="text-[16px] font-bold text-[#121223]">
+              Konum Seç
+            </Text>
             <View style={{ width: 26 }} />
           </View>
 
           {/* Bilgi şeridi */}
           <View className="flex-row items-center gap-2 px-4 py-2.5 bg-[#FFF1EE]">
-            <Ionicons name="information-circle" size={16} color={colors.primary.DEFAULT} />
+            <Ionicons
+              name="information-circle"
+              size={16}
+              color={colors.primary.DEFAULT}
+            />
             <Text className="text-[12px] text-[#646982] flex-1">
               Haritada uzun basarak etkinlik konumunu işaretle.
             </Text>
@@ -722,7 +799,8 @@ export default function CreateEventScreen() {
               <View className="flex-row items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-[#DCFCE7]">
                 <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
                 <Text className="text-[12px] font-semibold text-[#16A34A] flex-1">
-                  Pin koyuldu: {tempPin.latitude.toFixed(5)}, {tempPin.longitude.toFixed(5)}
+                  Pin koyuldu: {tempPin.latitude.toFixed(5)},{" "}
+                  {tempPin.longitude.toFixed(5)}
                 </Text>
                 <Pressable hitSlop={8} onPress={() => setTempPin(null)}>
                   <Ionicons name="close-circle" size={18} color="#16A34A" />

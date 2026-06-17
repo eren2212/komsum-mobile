@@ -193,6 +193,11 @@ export default function ProfileScreen() {
       onPress: () => router.push("/merchant/esnaf"),
     },
     {
+      icon: "construct-outline",
+      label: "Usta Profilim",
+      onPress: () => router.push("/service-provider/usta"),
+    },
+    {
       icon: "bookmark-outline",
       label: "Etkinlikler",
       onPress: () => router.push("/profile/my-events"),

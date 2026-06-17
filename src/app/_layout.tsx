@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import "../../global.css";
 
 import { useAuthStore } from "@/store/authStore";
@@ -22,7 +23,11 @@ setupNotifications();
 
 export default function RootLayout() {
   const { tokens, isHydrating, hydrateTokens } = useAuthStore();
-  const { hasSeenOnboarding, isChecked: isOnboardingChecked, check } = useOnboardingStore();
+  const {
+    hasSeenOnboarding,
+    isChecked: isOnboardingChecked,
+    check,
+  } = useOnboardingStore();
   const router = useRouter();
   const segments = useSegments();
 
@@ -63,7 +68,6 @@ export default function RootLayout() {
     else if (inAuthGroup || inOnboarding) {
       router.replace("/(tabs)");
     }
-
   }, [tokens, segments, isHydrating, isOnboardingChecked, hasSeenOnboarding]);
 
   // Token veya Onboarding yüklenirken splash ekranı göster
@@ -72,8 +76,10 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Slot />
-    </QueryClientProvider>
+    <KeyboardProvider>
+      <QueryClientProvider client={queryClient}>
+        <Slot />
+      </QueryClientProvider>
+    </KeyboardProvider>
   );
 }
