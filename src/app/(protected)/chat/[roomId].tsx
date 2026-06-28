@@ -23,19 +23,9 @@ import { Image } from "expo-image";
 
 import { chatApi, DtoMessage, DtoChatRoom, PageResponse } from "@/api/chat";
 import { userApi } from "@/api/user";
-import { supabase } from "@/lib/supabase";
+import { realtimeChat } from "@/lib/realtimeChat";
 import { colors } from "@/theme/color";
 import { BackButton } from "@/components";
-
-// Supabase'den gelen raw mesaj şeması (snake_case)
-interface SupabaseMessage {
-  id: number;
-  chat_room_id: number;
-  sender_id: number;
-  content: string;
-  is_read: boolean;
-  created_at: string;
-}
 
 function formatTime(iso: string): string {
   const date = new Date(iso);
@@ -107,43 +97,31 @@ export default function ChatRoomScreen() {
     }
   }, [isLoading]);
 
-  // Supabase real-time aboneliği
+  // Canlı mesaj aboneliği (kendi sunucumuz, SSE)
   useEffect(() => {
-    const channel = supabase
-      .channel(`messages:room:${parsedRoomId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `chat_room_id=eq.${parsedRoomId}`,
-        },
-        (payload) => {
-          const raw = payload.new as SupabaseMessage;
-          const newMsg: DtoMessage = {
-            id: raw.id,
-            senderId: raw.sender_id,
-            content: raw.content,
-            createdAt: raw.created_at,
-          };
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
-          setTimeout(
-            () => flatListRef.current?.scrollToEnd({ animated: true }),
-            50,
-          );
-          // Kullanıcı odadayken gelen mesajı hemen okundu yap
-          chatApi.markAsRead(parsedRoomId).catch(() => {});
-        },
-      )
-      .subscribe();
+    const unsubscribe = realtimeChat.addMessageListener((raw) => {
+      // Sadece bu odaya ait mesajlarla ilgilen
+      if (raw.chatRoomId !== parsedRoomId) return;
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      const newMsg: DtoMessage = {
+        id: raw.id,
+        senderId: raw.senderId,
+        content: raw.content,
+        createdAt: raw.createdAt,
+      };
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === newMsg.id)) return prev;
+        return [...prev, newMsg];
+      });
+      setTimeout(
+        () => flatListRef.current?.scrollToEnd({ animated: true }),
+        50,
+      );
+      // Kullanıcı odadayken gelen mesajı hemen okundu yap
+      chatApi.markAsRead(parsedRoomId).catch(() => {});
+    });
+
+    return unsubscribe;
   }, [parsedRoomId]);
 
   const handleSend = async () => {

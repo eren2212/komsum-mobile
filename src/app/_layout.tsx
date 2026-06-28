@@ -12,6 +12,7 @@ import {
   setupNotifications,
   setupNotificationListeners,
 } from "@/lib/notifications";
+import { realtimeChat } from "@/lib/realtimeChat";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,18 @@ export default function RootLayout() {
     const cleanup = setupNotificationListeners(router);
     return cleanup;
   }, [router]);
+
+  // Canlı mesaj akışı (SSE): giriş yapınca bağlan, çıkışta kopar.
+  // access_token değişimi (refresh dahil) bu effect'i tetikler → taze token ile
+  // yeniden bağlanır.
+  const accessToken = tokens?.access_token ?? null;
+  useEffect(() => {
+    if (accessToken) {
+      realtimeChat.connect(accessToken);
+    } else {
+      realtimeChat.disconnect();
+    }
+  }, [accessToken]);
 
   // Hydration veya Onboarding kontrolü bitmeden navigation guard çalışmasın
   useEffect(() => {

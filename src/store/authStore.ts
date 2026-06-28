@@ -7,6 +7,7 @@ import {
   RegisterPayload,
   ResetPasswordPayload,
 } from "@/api/auth";
+import { userApi } from "@/api/user";
 import { extractErrorMessage } from "@/utils/apiError";
 import { tokenStorage } from "@/utils/tokenStorage";
 import {
@@ -32,6 +33,8 @@ interface AuthState {
   login: (payload: LoginPayload) => Promise<boolean>;
   forgotPassword: (payload: ForgotPasswordPayload) => Promise<string | null>;
   resetPassword: (payload: ResetPasswordPayload) => Promise<string | null>;
+  /** Hesabı kalıcı sil (KVKK). Başarılıysa oturumu kapatır. */
+  deleteAccount: (password: string) => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
 }
@@ -104,6 +107,22 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (err: unknown) {
       set({ error: extractErrorMessage(err), isLoading: false });
       return null;
+    }
+  },
+
+  deleteAccount: async (password) => {
+    set({ isLoading: true, error: null });
+    try {
+      // Hesap silinmeden önce FCM token'ı backend'den kaldır (token hâlâ geçerliyken)
+      await unregisterPushNotifications().catch(() => {});
+      await userApi.deleteAccount(password);
+      // Başarılı: yerel oturumu temizle → guard signin'e yönlendirir
+      await tokenStorage.clear();
+      set({ tokens: null, isLoading: false, error: null });
+      return true;
+    } catch (err: unknown) {
+      set({ error: extractErrorMessage(err), isLoading: false });
+      return false;
     }
   },
 

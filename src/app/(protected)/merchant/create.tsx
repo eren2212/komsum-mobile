@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   View,
@@ -25,6 +25,7 @@ import * as Location from "expo-location";
 import { merchantApi, DtoCreateMerchant } from "@/api/merchant";
 import { colors } from "@/theme/color";
 import { BackButton, CustomInput, CustomButton } from "@/components";
+import { useUserLocation } from "@/hooks/useUserLocation";
 
 // Haritada konum işaretlenmezken varsayılan merkez (İstanbul)
 const DEFAULT_REGION = { latitude: 41.015137, longitude: 28.97953 };
@@ -329,6 +330,9 @@ export default function MerchantCreateScreen() {
   const [locating, setLocating] = useState(false);
   const [mapVisible, setMapVisible] = useState(false);
   const [tempPin, setTempPin] = useState<Pin | null>(null);
+  // Harita varsayılan olarak kullanıcının konumuna ortalansın diye GPS konumu
+  const mapRef = useRef<MapView>(null);
+  const { coords: userCoords, request: requestLocation } = useUserLocation();
 
   const { mutate: createProfile, isPending } = useMutation({
     mutationFn: (data: DtoCreateMerchant) =>
@@ -379,8 +383,20 @@ export default function MerchantCreateScreen() {
   // ── Konum: haritadan seç ──
   const openMap = () => {
     setTempPin(pin);
+    requestLocation(); // kullanıcının konumunu al (cache'liyse anında döner)
     setMapVisible(true);
   };
+
+  // Harita açıkken kullanıcı henüz pin koymadıysa, konum geldiğinde haritayı
+  // kullanıcının bulunduğu yere kaydır (initialRegion sadece ilk mount'ta okunur).
+  useEffect(() => {
+    if (mapVisible && userCoords && !tempPin) {
+      mapRef.current?.animateToRegion(
+        { ...userCoords, latitudeDelta: 0.01, longitudeDelta: 0.01 },
+        500,
+      );
+    }
+  }, [mapVisible, userCoords, tempPin]);
 
   const onMapPress = (e: LongPressEvent) => {
     setTempPin(e.nativeEvent.coordinate);
@@ -660,13 +676,20 @@ export default function MerchantCreateScreen() {
           </View>
 
           <MapView
+            ref={mapRef}
             style={{ flex: 1 }}
             provider={PROVIDER_GOOGLE}
             initialRegion={{
-              latitude: tempPin?.latitude ?? DEFAULT_REGION.latitude,
-              longitude: tempPin?.longitude ?? DEFAULT_REGION.longitude,
-              latitudeDelta: tempPin ? 0.01 : 0.05,
-              longitudeDelta: tempPin ? 0.01 : 0.05,
+              latitude:
+                tempPin?.latitude ??
+                userCoords?.latitude ??
+                DEFAULT_REGION.latitude,
+              longitude:
+                tempPin?.longitude ??
+                userCoords?.longitude ??
+                DEFAULT_REGION.longitude,
+              latitudeDelta: tempPin || userCoords ? 0.01 : 0.05,
+              longitudeDelta: tempPin || userCoords ? 0.01 : 0.05,
             }}
             onLongPress={onMapPress}
             scrollEnabled

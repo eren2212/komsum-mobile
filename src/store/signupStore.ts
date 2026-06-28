@@ -9,6 +9,7 @@ export interface PendingForm {
   lastname: string;
   email: string;
   password: string;
+  acceptedLegalDocumentIds: number[]; // onaylanan KVKK + Aydınlatma metni ID'leri
 }
 
 /** Modal içinde hangi adımdayız */

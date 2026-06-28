@@ -73,5 +73,11 @@ export const userApi = {
     apiClient
       .patch<RootEntity<boolean>>("/api/users/me/update-password", payload)
       .then((res) => unwrap(res.data)),
+
+  /** DELETE /api/users/me – Hesabı kalıcı olarak siler (KVKK). Şifre doğrulaması ister. */
+  deleteAccount: (password: string): Promise<void> =>
+    apiClient
+      .delete<RootEntity<void>>("/api/users/me", { data: { password } })
+      .then((res) => unwrap(res.data)),
 };
 

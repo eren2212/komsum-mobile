@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -21,7 +21,7 @@ import { Image } from "expo-image";
 import MapView, {
   Marker,
   PROVIDER_GOOGLE,
-  MapPressEvent,
+  LongPressEvent,
 } from "react-native-maps";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -31,6 +31,10 @@ import { eventApi, EventCategory, DtoCreateEvent } from "@/api/event";
 import { uploadApi } from "@/api/upload";
 import { colors } from "@/theme/color";
 import { BackButton } from "@/components";
+import { useUserLocation } from "@/hooks/useUserLocation";
+
+// Kullanıcının konumu alınamazsa haritanın açılacağı yedek merkez (İstanbul)
+const DEFAULT_REGION = { latitude: 41.015137, longitude: 28.97953 };
 
 // ─── Kategori Tanımları ───────────────────────────────────────────────────────
 
@@ -158,6 +162,9 @@ export default function CreateEventScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  // Harita varsayılan olarak kullanıcının konumuna ortalansın diye GPS konumu
+  const mapRef = useRef<MapView>(null);
+  const { coords: userCoords, request: requestLocation } = useUserLocation();
 
   // ── Mutation ──
   const { mutate: createEvent, isPending } = useMutation({
@@ -265,10 +272,22 @@ export default function CreateEventScreen() {
   // ── Modal aç/kapat + haritada pin bırak ──
   const openMap = () => {
     setTempPin(pin); // mevcut pin varsa modal'a taşı
+    requestLocation(); // kullanıcının konumunu al (cache'liyse anında döner)
     setMapVisible(true);
   };
 
-  const onMapPress = (e: MapPressEvent) => {
+  // Harita açıkken kullanıcı henüz pin koymadıysa, konum geldiğinde haritayı
+  // kullanıcının bulunduğu yere kaydır (initialRegion sadece ilk mount'ta okunur).
+  useEffect(() => {
+    if (mapVisible && userCoords && !tempPin) {
+      mapRef.current?.animateToRegion(
+        { ...userCoords, latitudeDelta: 0.01, longitudeDelta: 0.01 },
+        500,
+      );
+    }
+  }, [mapVisible, userCoords, tempPin]);
+
+  const onMapPress = (e: LongPressEvent) => {
     setTempPin(e.nativeEvent.coordinate);
   };
 
@@ -736,13 +755,20 @@ export default function CreateEventScreen() {
 
           {/* Harita — flex-1 ile ekranı kaplar, gesture çakışması yok */}
           <MapView
+            ref={mapRef}
             style={{ flex: 1 }}
             provider={PROVIDER_GOOGLE}
             initialRegion={{
-              latitude: tempPin?.latitude ?? 41.015137,
-              longitude: tempPin?.longitude ?? 28.97953,
-              latitudeDelta: tempPin ? 0.01 : 0.05,
-              longitudeDelta: tempPin ? 0.01 : 0.05,
+              latitude:
+                tempPin?.latitude ??
+                userCoords?.latitude ??
+                DEFAULT_REGION.latitude,
+              longitude:
+                tempPin?.longitude ??
+                userCoords?.longitude ??
+                DEFAULT_REGION.longitude,
+              latitudeDelta: tempPin || userCoords ? 0.01 : 0.05,
+              longitudeDelta: tempPin || userCoords ? 0.01 : 0.05,
             }}
             onLongPress={onMapPress}
             scrollEnabled

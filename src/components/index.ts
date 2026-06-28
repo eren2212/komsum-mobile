@@ -11,3 +11,6 @@ export { SkeletonBox } from "./SkeletonBox";
 export type { SkeletonBoxProps } from "./SkeletonBox";
 
 export { EventCard, EventCardSkeleton, EventCardCompactSkeleton } from "./EventCard";
+
+export { default as LegalDocumentModal } from "./LegalDocumentModal";
+export type { LegalDocumentModalProps } from "./LegalDocumentModal";

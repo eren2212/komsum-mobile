@@ -17,6 +17,7 @@ export interface RegisterPayload {
   email: string;
   password: string;        // 8–15 karakter
   neighborhoodId: number;  // pozitif, zorunlu
+  acceptedLegalDocumentIds: number[]; // onaylanan KVKK + Aydınlatma metni ID'leri
 }
 
 export interface LoginPayload {

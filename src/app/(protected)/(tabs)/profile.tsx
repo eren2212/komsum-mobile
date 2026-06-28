@@ -1,5 +1,16 @@
 import type { ComponentProps } from "react";
-import { Alert, StatusBar, Text, TouchableOpacity, View, ScrollView } from "react-native";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  ScrollView,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -108,11 +119,42 @@ export default function ProfileScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const logout = useAuthStore((s) => s.logout);
+  const deleteAccount = useAuthStore((s) => s.deleteAccount);
+
+  // Hesap silme modalı state'i
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const { data: profile, isLoading, error } = useQuery({
     queryKey: ["me", "profile"],
     queryFn: userApi.getMyProfile,
   });
+
+  const handleDeleteAccount = () => {
+    setDeletePassword("");
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    if (!deletePassword) {
+      Alert.alert("Şifre Gerekli", "Hesabınızı silmek için şifrenizi girin.");
+      return;
+    }
+    setDeleting(true);
+    const success = await deleteAccount(deletePassword);
+    setDeleting(false);
+    if (success) {
+      setDeleteModalVisible(false);
+      queryClient.clear();
+      // authStore token'ları temizledi → _layout guard signin'e yönlendirir
+    } else {
+      Alert.alert(
+        "Hesap Silinemedi",
+        useAuthStore.getState().error ?? "Bir hata oluştu. Şifrenizi kontrol edin.",
+      );
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -210,6 +252,13 @@ export default function ProfileScreen() {
       danger: true,
     },
 
+    {
+      icon: "trash-outline",
+      label: "Hesabı Sil",
+      onPress: handleDeleteAccount,
+      danger: true,
+    },
+
   ];
 
   return (
@@ -277,6 +326,65 @@ export default function ProfileScreen() {
           ))}
         </ScrollView>
       </View>
+
+      {/* ── Hesap Silme Onay Modalı ── */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !deleting && setDeleteModalVisible(false)}
+      >
+        <View className="flex-1 bg-black/50 items-center justify-center px-6">
+          <View className="w-full bg-white rounded-2xl p-6">
+            <Text className="text-secondary-900 text-lg font-bold mb-2">
+              Hesabını Sil
+            </Text>
+            <Text className="text-neutral-500 text-sm leading-5 mb-1">
+              Bu işlem geri alınamaz. Hesabın ve tüm verilerin (gönderiler,
+              yorumlar, ilanlar, mesajlar) kalıcı olarak silinir.
+            </Text>
+            <Text className="text-neutral-500 text-sm leading-5 mb-4">
+              Devam etmek için şifreni gir.
+            </Text>
+
+            <TextInput
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              placeholder="Şifren"
+              placeholderTextColor="#A0A5BA"
+              secureTextEntry
+              autoCapitalize="none"
+              editable={!deleting}
+              className="border border-neutral-200 rounded-xl px-4 h-[52px] text-secondary-900 mb-5"
+            />
+
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => setDeleteModalVisible(false)}
+                disabled={deleting}
+                activeOpacity={0.7}
+                className="flex-1 h-[52px] rounded-xl border border-neutral-200 items-center justify-center"
+              >
+                <Text className="text-neutral-600 font-semibold">Vazgeç</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={confirmDeleteAccount}
+                disabled={deleting}
+                activeOpacity={0.7}
+                className="flex-1 h-[52px] rounded-xl bg-error items-center justify-center"
+                style={{ opacity: deleting ? 0.6 : 1 }}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text className="text-white font-bold">Hesabı Sil</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

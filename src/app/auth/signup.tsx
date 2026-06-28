@@ -1,12 +1,25 @@
-import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { create } from "zustand";
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 
-import { BackButton, CustomButton, CustomInput } from "@/components";
+import {
+  BackButton,
+  CustomButton,
+  CustomInput,
+  LegalDocumentModal,
+} from "@/components";
 import { useSignupStore } from "@/store/signupStore";
+import { DtoLegalDocument, legalApi } from "@/api/legal";
 import BgAsset from "../../../assets/images/signup-bg-asset.svg";
 
 // ─── Local form state (Zustand) ───────────────────────────────────────────────
@@ -100,6 +113,41 @@ const useSignupForm = create<SignupFormState>((set, get) => ({
     }),
 }));
 
+// ─── Onay kutucuğu satırı ──────────────────────────────────────────────────────
+
+interface ConsentRowProps {
+  checked: boolean;
+  label: string;
+  onToggle: () => void;
+  onOpen: () => void;
+}
+
+function ConsentRow({ checked, label, onToggle, onOpen }: ConsentRowProps) {
+  return (
+    <View className="flex-row items-center">
+      <TouchableOpacity
+        onPress={onToggle}
+        activeOpacity={0.7}
+        hitSlop={8}
+        className="w-6 h-6 rounded-md border-2 items-center justify-center mr-3"
+        style={{
+          borderColor: checked ? "#FF6B4A" : "#D0D0D0",
+          backgroundColor: checked ? "#FF6B4A" : "transparent",
+        }}
+      >
+        {checked && <FontAwesome5 name="check" size={12} color="#FFFFFF" />}
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={onOpen} activeOpacity={0.7} className="flex-1">
+        <Text className="text-sm text-neutral-600">
+          <Text className="text-primary font-bold underline">{label}</Text>
+          <Text>'ni okudum ve onaylıyorum.</Text>
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function SignUpScreen() {
@@ -118,15 +166,60 @@ export default function SignUpScreen() {
 
   const { setPending } = useSignupStore();
 
+  // ── Yasal metinler ──
+  const {
+    data: legalDocs = [],
+    isLoading: legalLoading,
+    isError: legalError,
+    refetch: refetchLegal,
+  } = useQuery({
+    queryKey: ["legal-documents"],
+    queryFn: legalApi.getAll,
+    staleTime: 1000 * 60 * 60, // metinler sık değişmez
+    retry: 1,
+  });
+
+  // Onaylanan metin ID'leri ve hangi metin popup'ı açık
+  const [acceptedIds, setAcceptedIds] = useState<number[]>([]);
+  const [openDoc, setOpenDoc] = useState<DtoLegalDocument | null>(null);
+
+  const isAccepted = (id: number) => acceptedIds.includes(id);
+
+  const toggleAccept = (doc: DtoLegalDocument) => {
+    if (isAccepted(doc.id)) {
+      // İşaretliyse kaldır
+      setAcceptedIds((prev) => prev.filter((id) => id !== doc.id));
+    } else {
+      // Henüz onaylanmadıysa önce metni okutmak için popup aç
+      setOpenDoc(doc);
+    }
+  };
+
+  const approveDoc = (doc: DtoLegalDocument) => {
+    setAcceptedIds((prev) => (prev.includes(doc.id) ? prev : [...prev, doc.id]));
+    setOpenDoc(null);
+  };
+
+  // İki metin de onaylanmış mı?
+  const allAccepted =
+    legalDocs.length > 0 && legalDocs.every((d) => acceptedIds.includes(d.id));
+
   const handleContinue = () => {
     if (!validate()) return;
+    if (!allAccepted) return;
 
     const parts = name.trim().split(" ").filter(Boolean);
     const firstname = parts[0];
     const lastname = parts.slice(1).join(" ");
 
     // Form verisini Zustand'da sakla, kayıt 2. adımda tamamlanacak
-    setPending({ firstname, lastname, email, password });
+    setPending({
+      firstname,
+      lastname,
+      email,
+      password,
+      acceptedLegalDocumentIds: acceptedIds,
+    });
 
     router.push("/auth/neighborhood-select");
   };
@@ -211,8 +304,39 @@ export default function SignUpScreen() {
           />
         </View>
 
+        {/* ── Yasal metin onayları ── */}
+        <View className="mt-6 gap-3">
+          {legalLoading ? (
+            <ActivityIndicator size="small" color="#FF6B4A" />
+          ) : legalError ? (
+            <View className="items-center gap-2">
+              <Text className="text-error text-sm text-center">
+                Yasal metinler yüklenemedi. İnternetini kontrol edip tekrar dene.
+              </Text>
+              <TouchableOpacity onPress={() => refetchLegal()} activeOpacity={0.7}>
+                <Text className="text-primary font-bold">Tekrar Dene</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            legalDocs.map((doc) => (
+              <ConsentRow
+                key={doc.id}
+                checked={isAccepted(doc.id)}
+                label={doc.title}
+                onToggle={() => toggleAccept(doc)}
+                onOpen={() => setOpenDoc(doc)}
+              />
+            ))
+          )}
+        </View>
+
         <View className="mt-8">
-          <CustomButton label="DEVAM ET" fullWidth onPress={handleContinue} />
+          <CustomButton
+            label="DEVAM ET"
+            fullWidth
+            disabled={!allAccepted}
+            onPress={handleContinue}
+          />
         </View>
 
         <View className="flex-row justify-center items-center mt-6">
@@ -227,6 +351,15 @@ export default function SignUpScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAwareScrollView>
+
+      {/* ── Yasal metin popup'ı ── */}
+      <LegalDocumentModal
+        visible={openDoc !== null}
+        title={openDoc?.title ?? ""}
+        content={openDoc?.content ?? ""}
+        onApprove={() => openDoc && approveDoc(openDoc)}
+        onClose={() => setOpenDoc(null)}
+      />
     </SafeAreaView>
   );
 }

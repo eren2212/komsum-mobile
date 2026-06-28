@@ -8,7 +8,7 @@ import { notificationApi } from "@/api/notification";
 /**
  * Foreground davranışı: Uygulama açıkken FCM bildirimi gelirse
  * görsel uyarı GÖSTERME — inbox ekranında zaten DB'den çekiliyor,
- * mesajlar Supabase Realtime ile ekrana düşüyor.
+ * mesajlar kendi sunucumuzun SSE akışı ile ekrana düşüyor.
  *
  * Bu setNotificationHandler tüm bildirim türleri için geçerli.
  */

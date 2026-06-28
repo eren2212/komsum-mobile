@@ -17,7 +17,7 @@ import { Image } from "expo-image";
 
 import { chatApi, DtoChatRoom, PageResponse } from "@/api/chat";
 import { userApi } from "@/api/user";
-import { supabase } from "@/lib/supabase";
+import { realtimeChat } from "@/lib/realtimeChat";
 import { colors } from "@/theme/color";
 import { SkeletonBox } from "@/components";
 
@@ -138,13 +138,6 @@ function ChatRoomItem({ room, onPress }: ChatRoomItemProps) {
 
 // ─── MessagesScreen ───────────────────────────────────────────────────────────
 
-interface InboxMessage {
-    chat_room_id: number;
-    sender_id: number;
-    content: string;
-    created_at: string;
-}
-
 export default function MessagesScreen() {
     const router = useRouter();
     const queryClient = useQueryClient();
@@ -182,55 +175,45 @@ export default function MessagesScreen() {
         myIdRef.current = myProfile?.id ?? null;
     }, [myProfile?.id]);
 
-    // Supabase real-time: herhangi bir odaya yeni mesaj gelince inbox'ı güncelle
+    // Canlı akış (kendi sunucumuz, SSE): herhangi bir odaya yeni mesaj gelince inbox'ı güncelle
     useEffect(() => {
-        const channel = supabase
-            .channel("inbox-realtime")
-            .on(
-                "postgres_changes",
-                { event: "INSERT", schema: "public", table: "messages" },
-                (payload) => {
-                    const raw = payload.new as InboxMessage;
-                    const knownIds = roomsRef.current.map((r) => r.id);
+        const unsubscribe = realtimeChat.addMessageListener((raw) => {
+            const knownIds = roomsRef.current.map((r) => r.id);
 
-                    if (knownIds.includes(raw.chat_room_id)) {
-                        queryClient.setQueryData<PageResponse<DtoChatRoom>>(
-                            ["chatRooms"],
-                            (old) => {
-                                if (!old) return old;
-                                const myId = myIdRef.current;
-                                const isFromOther = myId !== null && raw.sender_id !== myId;
-                                const updated = old.content
-                                    .map((room) => {
-                                        if (room.id !== raw.chat_room_id) return room;
-                                        return {
-                                            ...room,
-                                            lastMessageContent: raw.content,
-                                            lastMessageAt: raw.created_at,
-                                            unreadCount: isFromOther
-                                                ? (room.unreadCount ?? 0) + 1
-                                                : room.unreadCount ?? 0,
-                                        };
-                                    })
-                                    .sort((a, b) => {
-                                        const aT = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
-                                        const bT = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
-                                        return bT - aT;
-                                    });
-                                return { ...old, content: updated };
-                            },
-                        );
-                    } else {
-                        // Yeni bir sohbet başlamış olabilir, listeyi yenile
-                        queryClient.invalidateQueries({ queryKey: ["chatRooms"] });
-                    }
-                },
-            )
-            .subscribe();
+            if (knownIds.includes(raw.chatRoomId)) {
+                queryClient.setQueryData<PageResponse<DtoChatRoom>>(
+                    ["chatRooms"],
+                    (old) => {
+                        if (!old) return old;
+                        const myId = myIdRef.current;
+                        const isFromOther = myId !== null && raw.senderId !== myId;
+                        const updated = old.content
+                            .map((room) => {
+                                if (room.id !== raw.chatRoomId) return room;
+                                return {
+                                    ...room,
+                                    lastMessageContent: raw.content,
+                                    lastMessageAt: raw.createdAt,
+                                    unreadCount: isFromOther
+                                        ? (room.unreadCount ?? 0) + 1
+                                        : room.unreadCount ?? 0,
+                                };
+                            })
+                            .sort((a, b) => {
+                                const aT = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+                                const bT = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+                                return bT - aT;
+                            });
+                        return { ...old, content: updated };
+                    },
+                );
+            } else {
+                // Yeni bir sohbet başlamış olabilir, listeyi yenile
+                queryClient.invalidateQueries({ queryKey: ["chatRooms"] });
+            }
+        });
 
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        return unsubscribe;
     }, []);
 
     const handleRoomPress = (room: DtoChatRoom) => {

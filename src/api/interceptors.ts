@@ -12,6 +12,10 @@ const PUBLIC_PATHS = [
   "/api/auth/refresh-token",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
+  // Kayıt öncesi (token yokken) çağrılan açık uçlar. Bunlar PUBLIC olmazsa,
+  // dönen 401 refresh→logout akışını tetikleyip kullanıcıyı signin'e atar.
+  "/api/legal",
+  "/api/locations",
 ];
 
 const isPublicPath = (url?: string) =>
