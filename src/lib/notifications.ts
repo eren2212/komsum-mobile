@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
@@ -5,8 +6,11 @@ import type { Router } from "expo-router";
 
 import { notificationApi } from "@/api/notification";
 
+/** Expo Push Service'in ürettiği token'lar bu önekle başlar. Backend de aynı öneke bakıyor. */
+const EXPO_TOKEN_PREFIX = "ExponentPushToken[";
+
 /**
- * Foreground davranışı: Uygulama açıkken FCM bildirimi gelirse
+ * Foreground davranışı: Uygulama açıkken push bildirimi gelirse
  * görsel uyarı GÖSTERME — inbox ekranında zaten DB'den çekiliyor,
  * mesajlar kendi sunucumuzun SSE akışı ile ekrana düşüyor.
  *
@@ -24,12 +28,16 @@ export function setupNotifications() {
 }
 
 /**
- * Bildirim iznini ister, FCM device token alır ve backend'e kaydeder.
+ * Bildirim iznini ister, Expo push token alır ve backend'e kaydeder.
  * Login/register sonrası tek seferlik çağrılır.
+ *
+ * Not: Expo Push Service bir relay'dir — Android'de token'ın altında
+ * yine FCM vardır (getExpoPushTokenAsync içeride getDevicePushTokenAsync
+ * çağırır), iOS'ta ise Expo doğrudan APNs'e gider.
  */
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   if (!Device.isDevice) {
-    console.log("[notifications] Emülatörde FCM yok, atlanıyor.");
+    console.log("[notifications] Push sadece gerçek cihazda çalışır, atlanıyor.");
     return null;
   }
 
@@ -52,21 +60,29 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     return null;
   }
 
+  // getExpoPushTokenAsync projectId olmadan ERR_NOTIFICATIONS_NO_EXPERIENCE_ID fırlatır.
+  const projectId =
+    Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+  if (!projectId) {
+    console.warn("[notifications] projectId bulunamadı (app.json → extra.eas.projectId), atlanıyor.");
+    return null;
+  }
+
   try {
-    // Android'de getDevicePushTokenAsync doğrudan FCM token verir.
-    // iOS'ta APNs üzerinden FCM'e yönlendirilir (Firebase Console'da APNs key gerekir).
-    const tokenResult = await Notifications.getDevicePushTokenAsync();
+    const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
     const token = tokenResult?.data;
-    console.log("[notifications] FCM token alındı:", token ? `${String(token).substring(0, 20)}...` : "BOŞ");
-    if (!token || typeof token !== "string") {
-      console.warn("[notifications] FCM token geçersiz, backend'e gönderilmiyor.");
+    console.log("[notifications] Expo push token alındı:", token ?? "BOŞ");
+
+    if (typeof token !== "string" || !token.startsWith(EXPO_TOKEN_PREFIX)) {
+      console.warn("[notifications] Expo push token geçersiz, backend'e gönderilmiyor.");
       return null;
     }
+
     await notificationApi.saveFcmToken(token);
-    console.log("[notifications] FCM token backend'e kaydedildi.");
+    console.log("[notifications] Expo push token backend'e kaydedildi.");
     return token;
   } catch (err) {
-    console.warn("[notifications] FCM token alınamadı:", err);
+    console.warn("[notifications] Expo push token alınamadı:", err);
     return null;
   }
 }
