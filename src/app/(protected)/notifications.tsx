@@ -17,6 +17,7 @@ import {
   DtoNotification,
   notificationApi,
 } from "@/api/notification";
+import { BackButton } from "@/components";
 import { colors } from "@/theme/color";
 
 function formatTime(iso: string): string {
@@ -170,57 +171,71 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F8FC]" edges={["top"]}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView className="flex-1 bg-secondary" edges={["top"]}>
+      <StatusBar
+        backgroundColor={colors.secondary.DEFAULT}
+        barStyle="light-content"
+        animated
+      />
 
-      <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-[#F0F2F8]">
-        <View className="flex-row items-center">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <Ionicons name="chevron-back" size={24} color="#1A1D2E" />
-          </TouchableOpacity>
-          <Text className="text-[18px] font-bold text-[#1A1D2E]">Bildirimler</Text>
-        </View>
-        {hasUnread && (
-          <TouchableOpacity
-            onPress={() => markAllMutation.mutate()}
-            disabled={markAllMutation.isPending}
-          >
-            <Text
-              style={{ color: colors.primary.DEFAULT, fontSize: 13, fontWeight: "600" }}
+      {/* Header */}
+      <View className="px-6 pt-2 pb-5">
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center gap-3">
+            <BackButton variant="ghost" />
+            <Text className="text-white text-[24px] font-bold">Bildirimler</Text>
+          </View>
+          {hasUnread && (
+            <TouchableOpacity
+              onPress={() => markAllMutation.mutate()}
+              disabled={markAllMutation.isPending}
+              activeOpacity={0.7}
             >
-              Tümünü okundu yap
-            </Text>
-          </TouchableOpacity>
-        )}
+              <Text
+                style={{ color: colors.primary.DEFAULT, fontSize: 13, fontWeight: "600" }}
+              >
+                Tümünü okundu yap
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color={colors.primary.DEFAULT} />
-        </View>
-      ) : items.length === 0 ? (
-        <View className="flex-1 items-center justify-center px-10">
-          <Ionicons name="notifications-off-outline" size={48} color="#C8CADE" />
-          <Text className="text-[14px] text-neutral-400 mt-3 text-center">
-            Henüz bildirimin yok. İlçendeki yeni gönderiler ve mesajlar burada görünecek.
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(n) => String(n.id)}
-          renderItem={({ item }) => (
-            <NotificationItem notification={item} onPress={() => handlePress(item)} />
-          )}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
-              tintColor={colors.primary.DEFAULT}
-            />
-          }
-        />
-      )}
+      {/* İçerik */}
+      <View
+        className="flex-1 bg-white"
+        style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" }}
+      >
+        {isLoading ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator color={colors.primary.DEFAULT} />
+          </View>
+        ) : items.length === 0 ? (
+          <View className="flex-1 items-center justify-center px-10">
+            <Ionicons name="notifications-off-outline" size={48} color="#C8CADE" />
+            <Text className="text-[14px] text-neutral-400 mt-3 text-center">
+              Henüz bildirimin yok. İlçendeki yeni gönderiler ve mesajlar burada görünecek.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={items}
+            keyExtractor={(n) => String(n.id)}
+            renderItem={({ item }) => (
+              <NotificationItem notification={item} onPress={() => handlePress(item)} />
+            )}
+            contentContainerStyle={{ paddingTop: 8 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetching}
+                onRefresh={refetch}
+                tintColor={colors.primary.DEFAULT}
+              />
+            }
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 }
