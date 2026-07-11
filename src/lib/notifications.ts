@@ -100,34 +100,78 @@ export async function unregisterPushNotifications() {
 }
 
 /**
+ * Bir bildirimin taşıdığı yönlendirme verisi. Hem push data'sından
+ * (backend `baseData()`) hem de in-app bildirim DTO'sundan gelebilir.
+ */
+export type NotificationRouteData = {
+  relatedEntityType?: string | null;
+  relatedEntityId?: string | number | null;
+  actorFirstName?: string | null;
+  actorLastName?: string | null;
+  actorAvatarUrl?: string | null;
+};
+
+/**
+ * Bildirim verisine göre ilgili detay ekranına yönlendirir.
+ * Üç tap noktası da (push tap, in-app liste, cold-start) bunu kullanır ki
+ * yönlendirme mantığı tek yerde dursun.
+ */
+export function navigateFromNotification(
+  router: Router,
+  data?: NotificationRouteData,
+) {
+  if (!data?.relatedEntityType || data.relatedEntityId == null) return;
+
+  const id = String(data.relatedEntityId);
+  switch (data.relatedEntityType) {
+    case "POST":
+      router.push(`/post/${id}` as never);
+      break;
+    case "EVENT":
+      router.push(`/event/${id}` as never);
+      break;
+    case "CHAT_ROOM":
+      // roomId + gönderen bilgisi → sohbet header'ı dolu açılsın
+      router.push({
+        pathname: "/chat/[roomId]",
+        params: {
+          roomId: id,
+          otherUserFirstName: data.actorFirstName ?? "",
+          otherUserLastName: data.actorLastName ?? "",
+          ...(data.actorAvatarUrl
+            ? { otherUserAvatarUrl: data.actorAvatarUrl }
+            : {}),
+        },
+      } as never);
+      break;
+  }
+}
+
+/**
  * Bildirim tap'lendiğinde ilgili ekrana yönlendir.
  * Uygulama açıkken push iconuna basılırsa veya arka plandan açılırsa tetiklenir.
  */
 export function setupNotificationListeners(router: Router) {
   const sub = Notifications.addNotificationResponseReceivedListener((response) => {
     const data = response.notification.request.content.data as
-      | {
-          relatedEntityType?: string;
-          relatedEntityId?: string;
-        }
+      | NotificationRouteData
       | undefined;
-
-    if (!data?.relatedEntityType || !data?.relatedEntityId) return;
-
-    const id = data.relatedEntityId;
-    switch (data.relatedEntityType) {
-      case "POST":
-        router.push(`/post/${id}` as never);
-        break;
-      case "EVENT":
-        // event detay ekranı varsa oraya, yoksa events feed
-        router.push(`/(protected)/(tabs)` as never);
-        break;
-      case "CHAT_ROOM":
-        router.push(`/chat/${id}` as never);
-        break;
-    }
+    navigateFromNotification(router, data);
   });
 
   return () => sub.remove();
+}
+
+/**
+ * Uygulama tamamen kapalıyken bir bildirime basılarak açıldıysa, o bildirimin
+ * ekranına yönlendir. `addNotificationResponseReceivedListener` bu durumda
+ * tetiklenmediği için ayrıca ele alınır. Auth hazır olduktan sonra bir kez
+ * çağrılmalı (bkz. _layout.tsx).
+ */
+export async function handleColdStartNotification(router: Router) {
+  const response = await Notifications.getLastNotificationResponseAsync();
+  const data = response?.notification.request.content.data as
+    | NotificationRouteData
+    | undefined;
+  navigateFromNotification(router, data);
 }

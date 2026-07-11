@@ -18,6 +18,7 @@ import {
   notificationApi,
 } from "@/api/notification";
 import { BackButton } from "@/components";
+import { navigateFromNotification } from "@/lib/notifications";
 import { colors } from "@/theme/color";
 
 function formatTime(iso: string): string {
@@ -155,19 +156,13 @@ export default function NotificationsScreen() {
   const handlePress = (n: DtoNotification) => {
     if (!n.isRead) markAsReadMutation.mutate(n.id);
 
-    if (n.relatedEntityType && n.relatedEntityId) {
-      switch (n.relatedEntityType) {
-        case "POST":
-          router.push(`/post/${n.relatedEntityId}` as never);
-          break;
-        case "CHAT_ROOM":
-          router.push(`/chat/${n.relatedEntityId}` as never);
-          break;
-        case "EVENT":
-          router.push(`/(protected)/(tabs)` as never);
-          break;
-      }
-    }
+    navigateFromNotification(router, {
+      relatedEntityType: n.relatedEntityType,
+      relatedEntityId: n.relatedEntityId,
+      actorFirstName: n.actorFirstName,
+      actorLastName: n.actorLastName,
+      actorAvatarUrl: n.actorAvatarUrl,
+    });
   };
 
   return (

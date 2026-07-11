@@ -4,18 +4,17 @@ import {
   StatusBar,
   Switch,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import {
   DtoNotificationPreferences,
   notificationApi,
 } from "@/api/notification";
+import { BackButton } from "@/components";
 import { colors } from "@/theme/color";
 
 interface RowProps {
@@ -58,7 +57,6 @@ function PreferenceRow({
 }
 
 export default function NotificationSettingsScreen() {
-  const router = useRouter();
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
@@ -99,13 +97,15 @@ export default function NotificationSettingsScreen() {
     <SafeAreaView className="flex-1 bg-[#F7F8FC]" edges={["top"]}>
       <StatusBar barStyle="dark-content" />
 
-      <View className="flex-row items-center px-5 py-4 bg-white border-b border-[#F0F2F8]">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3">
-          <Ionicons name="chevron-back" size={24} color="#1A1D2E" />
-        </TouchableOpacity>
-        <Text className="text-[18px] font-bold text-[#1A1D2E]">
+      <View className="flex-row items-center justify-between px-6 pt-4 pb-6">
+        <BackButton />
+
+        <Text className="text-neutral-600 text-[17px] font-bold">
           Bildirim Ayarları
         </Text>
+
+        {/* Sağ tarafı dengele */}
+        <View style={{ width: 40 }} />
       </View>
 
       {isLoading ? (

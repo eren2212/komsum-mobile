@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -11,6 +11,7 @@ import SplashScreen from "@/components/SplashScreen";
 import {
   setupNotifications,
   setupNotificationListeners,
+  handleColdStartNotification,
 } from "@/lib/notifications";
 import { realtimeChat } from "@/lib/realtimeChat";
 
@@ -82,6 +83,19 @@ export default function RootLayout() {
       router.replace("/(tabs)");
     }
   }, [tokens, segments, isHydrating, isOnboardingChecked, hasSeenOnboarding]);
+
+  // Cold-start: uygulama kapalıyken bir bildirime basılarak açıldıysa, auth
+  // hazır olduktan sonra bir kez ilgili ekrana yönlendir. Guard'ın ilk
+  // redirect'i tamamlandıktan sonra push en üste oturur.
+  const coldStartHandled = useRef(false);
+  useEffect(() => {
+    if (isHydrating || !isOnboardingChecked || !tokens || !hasSeenOnboarding) {
+      return;
+    }
+    if (coldStartHandled.current) return;
+    coldStartHandled.current = true;
+    handleColdStartNotification(router);
+  }, [isHydrating, isOnboardingChecked, tokens, hasSeenOnboarding, router]);
 
   // Token veya Onboarding yüklenirken splash ekranı göster
   if (isHydrating || !isOnboardingChecked) {

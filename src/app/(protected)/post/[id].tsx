@@ -461,6 +461,51 @@ export default function PostDetailScreen() {
       ? "#FEF3C7"
       : "#121223";
 
+  const renderComment = useCallback(
+    ({ item }: { item: DtoComment }) => (
+      <View className="px-4">
+        <CommentItem
+          comment={item}
+          isOwner={currentUserId === item.authorId}
+          onDelete={(id) => deleteComment(id)}
+          onEdit={(c) => setEditingComment(c)}
+          isDeletingId={deletingId}
+          onAuthorPress={(authorId) =>
+            router.push({ pathname: "/(protected)/user/[id]", params: { id: String(authorId) } })
+          }
+        />
+      </View>
+    ),
+    [deletingId, currentUserId, deleteComment, router]
+  );
+
+  // post null iken (postJson yok, henüz fetch sürüyor veya hata var) güvenli UI göster.
+  // Guard'ı PostHeader gibi post'u deref eden JSX const'larından ÖNCE yap ki
+  // bildirimden sadece id ile gelip post henüz yüklenmemişken çökmesin.
+  if (!post) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+        <View className="flex-row items-center justify-between px-4 py-3 border-b border-[#f1f5f9]">
+          <BackButton />
+          <Text className="text-[18px] font-bold text-[#121223]">Gönderi Detayı</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View className="flex-1 items-center justify-center px-6">
+          {postLoading ? (
+            <ActivityIndicator color={colors.primary.DEFAULT} />
+          ) : (
+            <>
+              <Ionicons name="alert-circle-outline" size={48} color="#C8CADE" />
+              <Text className="text-[14px] text-neutral-400 mt-3 text-center">
+                {postError ? "Gönderi yüklenemedi veya silinmiş olabilir." : "Gönderi bulunamadı."}
+              </Text>
+            </>
+          )}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   // ── FlatList ListHeaderComponent: post içeriği
   const PostHeader = (
     <View>
@@ -606,24 +651,6 @@ export default function PostDetailScreen() {
     </View>
   );
 
-  const renderComment = useCallback(
-    ({ item }: { item: DtoComment }) => (
-      <View className="px-4">
-        <CommentItem
-          comment={item}
-          isOwner={currentUserId === item.authorId}
-          onDelete={(id) => deleteComment(id)}
-          onEdit={(c) => setEditingComment(c)}
-          isDeletingId={deletingId}
-          onAuthorPress={(authorId) =>
-            router.push({ pathname: "/(protected)/user/[id]", params: { id: String(authorId) } })
-          }
-        />
-      </View>
-    ),
-    [deletingId, currentUserId, deleteComment, router]
-  );
-
   const ListFooter = (
     <View className="pb-6">
       {isFetchingNextPage && (
@@ -646,31 +673,6 @@ export default function PostDetailScreen() {
       </Text>
     </View>
   );
-
-  // post null iken (postJson yok, henüz fetch sürüyor veya hata var) güvenli UI göster
-  if (!post) {
-    return (
-      <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-[#f1f5f9]">
-          <BackButton />
-          <Text className="text-[18px] font-bold text-[#121223]">Gönderi Detayı</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View className="flex-1 items-center justify-center px-6">
-          {postLoading ? (
-            <ActivityIndicator color={colors.primary.DEFAULT} />
-          ) : (
-            <>
-              <Ionicons name="alert-circle-outline" size={48} color="#C8CADE" />
-              <Text className="text-[14px] text-neutral-400 mt-3 text-center">
-                {postError ? "Gönderi yüklenemedi veya silinmiş olabilir." : "Gönderi bulunamadı."}
-              </Text>
-            </>
-          )}
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
