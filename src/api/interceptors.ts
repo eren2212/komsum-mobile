@@ -75,29 +75,8 @@ export function setupInterceptors() {
    * - Refresh başarısızsa kullanıcı logout edilir ve signin'e yönlendirilir.
    */
   apiClient.interceptors.response.use(
-    (response) => {
-      if (response.config.url?.includes("/api/posts/feed")) {
-        console.log(
-          "[axios] ← OK",
-          response.config.url,
-          "contentLen=",
-          response.data?.data?.content?.length,
-          "nextCursor=",
-          response.data?.data?.nextCursor,
-        );
-      }
-      return response;
-    },
+    (response) => response,
     async (error) => {
-      console.log(
-        "[axios] ← ERROR",
-        error.config?.method?.toUpperCase(),
-        error.config?.url,
-        "status=",
-        error.response?.status,
-        "data=",
-        JSON.stringify(error.response?.data),
-      );
       const originalRequest = error.config;
 
       // Public endpoint hatalarını ya da zaten tekrarlanmış istekleri geç
