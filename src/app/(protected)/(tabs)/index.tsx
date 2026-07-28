@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Image } from "expo-image";
 
 import { postApi, DtoPost, PostType } from "@/api/post";
@@ -595,15 +595,15 @@ export default function HomeScreen() {
     ],
     queryFn: ({ pageParam }) =>
       postApi.getFeed(
-        pageParam as number,
+        pageParam as string | null,
         10,
         postType,
         isSponsored && hasCoords ? coords!.latitude : undefined,
         isSponsored && hasCoords ? coords!.longitude : undefined,
         radiusMeters,
       ),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => (lastPage.last ? undefined : lastPage.number + 1),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: postsEnabled,
     staleTime: 3 * 60 * 1000, // 3 dk boyunca fresh — chip değişiminde yeniden fetch yok
   });
@@ -647,6 +647,59 @@ export default function HomeScreen() {
   const fetchNextPage = isEventMode ? eventsQuery.fetchNextPage : postsQuery.fetchNextPage;
   const refetch = isEventMode ? eventsQuery.refetch : postsQuery.refetch;
   const isRefetching = isEventMode ? eventsQuery.isRefetching : postsQuery.isRefetching;
+
+  // ── PART 2: "N yeni gönderi" rozeti ─────────────────────────────────────────
+  // Sayım mahalle-ALL scope'unda (backend, kendi postların hariç). Yalnızca ALL
+  // sekmesinde gösterilir; SPONSORED (mesafe bazlı) ve Etkinlik akışına uygulanmaz.
+  const listRef = useRef<FlatList>(null);
+
+  const newCountQuery = useQuery({
+    queryKey: ["neighborhoodFeed", "newCount"],
+    queryFn: () => postApi.getFeedNewCount(),
+    enabled: activeFilter === "ALL" && !!postsQuery.data,
+    refetchInterval: 45_000,
+    staleTime: 30_000,
+  });
+
+  const newCount = activeFilter === "ALL" && !isEventMode ? newCountQuery.data ?? 0 : 0;
+  const showNewPill = newCount > 0;
+
+  // Ekran her odaklandığında sayacı tazele (arka plandan dönüş / sekme değişimi).
+  useFocusEffect(
+    useCallback(() => {
+      if (activeFilter === "ALL") newCountQuery.refetch();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeFilter])
+  );
+
+  // En yeni yüklü post'u "görüldü" olarak işaretle ve sayacı sıfırla.
+  const markNewestSeen = useCallback(
+    async (data?: typeof postsQuery.data) => {
+      const newest = data?.pages?.[0]?.content?.[0];
+      if (newest) {
+        await postApi.markFeedSeen(newest.id).catch(() => {});
+        newCountQuery.refetch();
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    []
+  );
+
+  // "N yeni gönderi" → tepeye kaydır, akışı tazele, görüldü işaretle.
+  const handleNewPostsPress = useCallback(async () => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    const res = await postsQuery.refetch();
+    await markNewestSeen(res.data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postsQuery.refetch, markNewestSeen]);
+
+  // Pull-to-refresh: tazele + (ALL modunda) görüldü işaretle.
+  const handleRefresh = useCallback(async () => {
+    const res = await refetch();
+    if (!isEventMode && activeFilter === "ALL") {
+      await markNewestSeen((res as any)?.data);
+    }
+  }, [refetch, isEventMode, activeFilter, markNewestSeen]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNext) fetchNextPage();
@@ -843,7 +896,35 @@ export default function HomeScreen() {
       />
 
       <View className="flex-1 bg-surface">
+        {/* PART 2: "N yeni gönderi" yüzen rozeti (yalnızca ALL akışı) */}
+        {showNewPill && (
+          <View
+            style={{ position: "absolute", top: 12, left: 0, right: 0, alignItems: "center", zIndex: 20 }}
+            pointerEvents="box-none"
+          >
+            <TouchableOpacity
+              onPress={handleNewPostsPress}
+              activeOpacity={0.9}
+              className="flex-row items-center gap-1.5 px-4 py-2 rounded-full"
+              style={{
+                backgroundColor: colors.primary.DEFAULT,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.25,
+                shadowRadius: 8,
+                elevation: 6,
+              }}
+            >
+              <Ionicons name="arrow-up" size={14} color="#fff" />
+              <Text className="text-[13px] font-bold text-white">
+                {newCount} yeni gönderi
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <FlatList
+          ref={listRef}
           key={isEventMode ? "event-grid" : "post-list"}
           data={feedItems}
           keyExtractor={keyExtractor}
@@ -860,7 +941,7 @@ export default function HomeScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isRefetching && !isLoading}
-              onRefresh={refetch}
+              onRefresh={handleRefresh}
               tintColor={colors.primary.DEFAULT}
               colors={[colors.primary.DEFAULT]}
             />

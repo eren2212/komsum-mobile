@@ -193,7 +193,8 @@ export default function CreateScreen() {
   const { mutate: createPost, isPending } = useMutation({
     mutationFn: postApi.createPost,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["feed"] });
+      // Mahalle akışını (ve new-count'u prefix eşleşmesiyle) tazele → kendi postun tepede belirir.
+      queryClient.invalidateQueries({ queryKey: ["neighborhoodFeed"] });
       setContent("");
       router.back();
     },

@@ -64,6 +64,17 @@ interface PageResponse<T> {
   last: boolean;
 }
 
+/**
+ * Cursor (keyset) tabanlı feed dilimi. Backend DtoPostSlice ile birebir eşleşir.
+ * nextCursor'u incelemeden, bir sonraki (daha eski) sayfa için aynen geri yolla.
+ * null ise daha eski post yok.
+ */
+export interface DtoPostSlice {
+  content: DtoPost[];
+  nextCursor: string | null;
+  hasNext: boolean;
+}
+
 // ─── API ──────────────────────────────────────────────────────────────────────
 
 export const postApi = {
@@ -80,28 +91,47 @@ export const postApi = {
       .then((res) => unwrap(res.data)),
 
   /**
-   * GET /api/posts/feed – Mahalle akışı (type verilirse filtreli).
+   * GET /api/posts/feed – Mahalle akışı (cursor/keyset tabanlı, type verilirse filtreli).
+   * cursor: bir önceki dilimin nextCursor'u; ilk sayfada null/undefined geç.
    * type=SPONSORED + lat/lng verilirse esnaf postları radius (metre) bazlı yakınlığa göre gelir;
-   * aksi halde mahalle bazlı davranış korunur (lat/lng/radius opsiyonel).
+   * aksi halde saf kronolojik akış korunur (lat/lng/radius opsiyonel).
    */
   getFeed: (
-    pageNo = 0,
+    cursor?: string | null,
     pageSize = 10,
     type?: PostType,
     lat?: number,
     lng?: number,
     radius = 5000,
-  ): Promise<PageResponse<DtoPost>> =>
+  ): Promise<DtoPostSlice> =>
     apiClient
-      .get<RootEntity<PageResponse<DtoPost>>>("/api/posts/feed", {
+      .get<RootEntity<DtoPostSlice>>("/api/posts/feed", {
         params: {
-          pageNo,
           pageSize,
           radius,
+          ...(cursor ? { cursor } : {}),
           ...(type ? { type } : {}),
           ...(lat != null && lng != null ? { lat, lng } : {}),
         },
       })
+      .then((res) => unwrap(res.data)),
+
+  /**
+   * GET /api/posts/feed/new-count – Akışta "en son görülenden" bu yana kaç yeni post var.
+   * İlk çağrıda backend taban çizgisini kurar ve 0 döner.
+   */
+  getFeedNewCount: (): Promise<number> =>
+    apiClient
+      .get<RootEntity<number>>("/api/posts/feed/new-count")
+      .then((res) => unwrap(res.data)),
+
+  /**
+   * POST /api/posts/feed/mark-seen/{postId} – "En son görülen" işaretini ilerlet.
+   * pull-to-refresh veya "N yeni gönderi" tıklamasından sonra en yeni post id'si ile çağrılır.
+   */
+  markFeedSeen: (postId: number): Promise<boolean> =>
+    apiClient
+      .post<RootEntity<boolean>>(`/api/posts/feed/mark-seen/${postId}`)
       .then((res) => unwrap(res.data)),
 
   /** GET /api/posts/my-posts – Kendi standart gönderilerim */

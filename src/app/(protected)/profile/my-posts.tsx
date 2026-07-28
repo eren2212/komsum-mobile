@@ -382,7 +382,7 @@ export default function MyPostsScreen() {
     mutationFn: postApi.deletePost,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-posts"] });
-      queryClient.invalidateQueries({ queryKey: ["feed"] });
+      queryClient.invalidateQueries({ queryKey: ["neighborhoodFeed"] });
     },
     onError: () => {
       Alert.alert("Hata", "Gönderi silinirken bir sorun oluştu, tekrar dene.");
@@ -395,7 +395,7 @@ export default function MyPostsScreen() {
     onSuccess: () => {
       setEditingPost(null);
       queryClient.invalidateQueries({ queryKey: ["my-posts"] });
-      queryClient.invalidateQueries({ queryKey: ["feed"] });
+      queryClient.invalidateQueries({ queryKey: ["neighborhoodFeed"] });
     },
     onError: () => {
       Alert.alert("Hata", "Gönderi güncellenirken bir sorun oluştu, tekrar dene.");
