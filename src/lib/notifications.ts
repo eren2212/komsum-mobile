@@ -5,6 +5,7 @@ import { Platform } from "react-native";
 import type { Router } from "expo-router";
 
 import { notificationApi } from "@/api/notification";
+import { extractErrorMessage } from "@/utils/apiError";
 
 /** Expo Push Service'in ürettiği token'lar bu önekle başlar. Backend de aynı öneke bakıyor. */
 const EXPO_TOKEN_PREFIX = "ExponentPushToken[";
@@ -37,7 +38,7 @@ export function setupNotifications() {
  */
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   if (!Device.isDevice) {
-    console.log("[notifications] Push sadece gerçek cihazda çalışır, atlanıyor.");
+    if (__DEV__) console.log("[notifications] Push sadece gerçek cihazda çalışır, atlanıyor.");
     return null;
   }
 
@@ -56,7 +57,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     finalStatus = status;
   }
   if (finalStatus !== "granted") {
-    console.log("[notifications] Kullanıcı izin vermedi.");
+    if (__DEV__) console.log("[notifications] Kullanıcı izin vermedi.");
     return null;
   }
 
@@ -64,25 +65,29 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   const projectId =
     Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
   if (!projectId) {
-    console.warn("[notifications] projectId bulunamadı (app.json → extra.eas.projectId), atlanıyor.");
+    if (__DEV__) console.warn("[notifications] projectId bulunamadı (app.json → extra.eas.projectId), atlanıyor.");
     return null;
   }
 
   try {
     const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
     const token = tokenResult?.data;
-    console.log("[notifications] Expo push token alındı:", token ?? "BOŞ");
+    // Token'ın değeri loglanmaz: cihaza doğrudan bildirim gönderilmesini
+    // sağlayan bir adrestir, log'a düşerse kötüye kullanılabilir.
+    if (__DEV__) console.log("[notifications] Expo push token alındı:", token ? "VAR" : "BOŞ");
 
     if (typeof token !== "string" || !token.startsWith(EXPO_TOKEN_PREFIX)) {
-      console.warn("[notifications] Expo push token geçersiz, backend'e gönderilmiyor.");
+      if (__DEV__) console.warn("[notifications] Expo push token geçersiz, backend'e gönderilmiyor.");
       return null;
     }
 
     await notificationApi.saveFcmToken(token);
-    console.log("[notifications] Expo push token backend'e kaydedildi.");
+    if (__DEV__) console.log("[notifications] Expo push token backend'e kaydedildi.");
     return token;
   } catch (err) {
-    console.warn("[notifications] Expo push token alınamadı:", err);
+    // err objesinin tamamı loglanmaz: axios hatasında err.config.headers
+    // Authorization başlığını taşıyabiliyor.
+    if (__DEV__) console.warn("[notifications] Expo push token alınamadı:", extractErrorMessage(err));
     return null;
   }
 }
@@ -95,7 +100,7 @@ export async function unregisterPushNotifications() {
   try {
     await notificationApi.deleteFcmToken();
   } catch (err) {
-    console.warn("[notifications] Token silme başarısız:", err);
+    if (__DEV__) console.warn("[notifications] Token silme başarısız:", extractErrorMessage(err));
   }
 }
 

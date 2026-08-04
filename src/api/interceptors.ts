@@ -49,20 +49,16 @@ export function setupInterceptors() {
     const tokens = useAuthStore.getState().tokens;
     if (tokens?.access_token) {
       config.headers.Authorization = `Bearer ${tokens.access_token}`;
-      console.log(
-        "[axios] →",
-        config.method?.toUpperCase(),
-        config.url,
-        "auth=Bearer ***" + tokens.access_token.slice(-8),
-      );
-    } else {
+    } else if (__DEV__) {
+      // Token'ın kendisi (parçası dahi) ASLA loglanmaz: cihaz logları
+      // Logcat/Console ve crash toplayıcılar tarafından okunabiliyor,
+      // refresh token uzun ömürlü olduğu için sızması hesap ele geçirmeye
+      // yeter. Sadece hangi isteğin token'sız gittiği bilgisi bırakıldı.
       console.warn(
         "[axios] →",
         config.method?.toUpperCase(),
         config.url,
-        "AUTH HEADER YOK (tokens=",
-        tokens,
-        ")",
+        "AUTH HEADER YOK",
       );
     }
     return config;

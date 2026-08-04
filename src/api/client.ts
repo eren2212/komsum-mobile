@@ -10,7 +10,9 @@ import axios from "axios";
  */
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
-console.log("[KOMSUM] baked API URL:", BASE_URL);
+if (__DEV__) {
+  console.log("[KOMSUM] baked API URL:", BASE_URL);
+}
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
