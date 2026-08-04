@@ -3,6 +3,7 @@ import { apiClient } from "./client";
 import { authApi } from "./auth";
 import { useAuthStore } from "@/store/authStore";
 import { tokenStorage } from "@/utils/tokenStorage";
+import { realtimeChat } from "@/lib/realtimeChat";
 
 // ─── Public endpoint'ler — token eklenmez, 401'de refresh tetiklenmez ─────────
 
@@ -10,6 +11,9 @@ const PUBLIC_PATHS = [
   "/api/auth/login",
   "/api/auth/register",
   "/api/auth/refresh-token",
+  // logout, Authorization başlığında REFRESH token taşır — request
+  // interceptor'ın onu access token'la ezmemesi için public sayılır.
+  "/api/auth/logout",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
   // Kayıt öncesi (token yokken) çağrılan açık uçlar. Bunlar PUBLIC olmazsa,
@@ -34,6 +38,23 @@ function flushQueue(err: unknown, token: string | null = null) {
     err ? reject(err) : resolve(token!)
   );
   queue = [];
+}
+
+/**
+ * Oturumun sunucu tarafında geçersiz olduğu anlaşıldığında (refresh token
+ * reddedildi ya da hiç yok) yerel durumu KESİN olarak temizler.
+ *
+ * authStore.logout() burada bilerek kullanılmıyor: o, sunucuya çıkış isteği
+ * gönderiyor ve state'i ancak istek sonuçlandıktan sonra temizliyor. Oysa
+ * buradaki senaryoda token'ın geçersiz olduğunu zaten biliyoruz — istek boşuna
+ * gider ve temizlik gecikirse signin'e giderken bir an korumalı ekran
+ * görünebilir. Bu yüzden temizlik doğrudan ve sırayla yapılır.
+ */
+async function forceLocalLogout() {
+  realtimeChat.disconnect();
+  await tokenStorage.clear();
+  useAuthStore.setState({ tokens: null, error: null });
+  router.replace("/auth/signin");
 }
 
 // ─── Kurulum (bir kez çağrılır) ───────────────────────────────────────────────
@@ -97,15 +118,13 @@ export function setupInterceptors() {
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const { tokens, logout } = useAuthStore.getState();
+      const { tokens } = useAuthStore.getState();
 
       // Refresh token yoksa direkt çıkış
       if (!tokens?.refresh_token) {
         isRefreshing = false;
         flushQueue(error);
-        logout();
-        await tokenStorage.clear();
-        router.replace("/auth/signin");
+        await forceLocalLogout();
         return Promise.reject(error);
       }
 
@@ -122,8 +141,7 @@ export function setupInterceptors() {
         return apiClient(originalRequest);
       } catch (refreshError) {
         flushQueue(refreshError);
-        useAuthStore.getState().logout();
-        router.replace("/auth/signin");
+        await forceLocalLogout();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

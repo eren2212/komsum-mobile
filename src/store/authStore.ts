@@ -127,8 +127,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    // Token henüz geçerli iken backend'e FCM token sil isteğini gönder
-    unregisterPushNotifications().finally(() => {
+    // Yerel durumu temizlemeden ÖNCE, token'lar hâlâ geçerliyken sunucuya
+    // haber ver: (1) push token'ı sil, (2) refresh token'ı iptal ettir.
+    // İkisi de başarısız olsa bile çıkış her hâlükârda tamamlanır — kullanıcı
+    // ağ hatası yüzünden uygulamada mahsur kalmamalı.
+    const refreshToken = useAuthStore.getState().tokens?.refresh_token;
+
+    Promise.allSettled([
+      unregisterPushNotifications(),
+      refreshToken ? authApi.logout(refreshToken) : Promise.resolve(),
+    ]).finally(() => {
       tokenStorage.clear();
       set({ tokens: null, error: null });
     });

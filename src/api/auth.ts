@@ -74,6 +74,20 @@ export const authApi = {
       )
       .then((res) => unwrap(res.data)),
 
+  /**
+   * POST /api/auth/logout — refresh token'ı sunucu tarafında iptal eder.
+   * İstemci token'ı zaten siliyor; bu çağrı çalınmış bir kopyanın kalan ömrü
+   * boyunca kullanılmasını engeller. Başarısız olursa çıkış yine de tamamlanır.
+   */
+  logout: (refreshToken: string): Promise<string> =>
+    apiClient
+      .post<RootEntity<string>>(
+        "/api/auth/logout",
+        {},
+        { headers: { Authorization: `Bearer ${refreshToken}` } }
+      )
+      .then((res) => unwrap(res.data)),
+
   /** POST /api/auth/forgot-password — OTP e-postaya gönderilir */
   forgotPassword: (payload: ForgotPasswordPayload): Promise<string> =>
     apiClient
