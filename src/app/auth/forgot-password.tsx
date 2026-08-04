@@ -60,8 +60,11 @@ export default function ForgotPasswordScreen() {
     const message = await forgotPassword({ email });
 
     if (message) {
-      // Backend'in başarı mesajını göster, reset sayfasına geç
-      Alert.alert("E-posta Gönderildi", message, [
+      // Backend'in mesajını göster, reset sayfasına geç.
+      // Başlık bilerek nötr: backend e-posta kayıtlı olmasa da aynı yanıtı
+      // döndürüyor (hesap sorgulamayı engellemek için), bu yüzden burada
+      // "gönderildi" demek doğru olmaz.
+      Alert.alert("Şifre Sıfırlama", message, [
         {
           text: "Devam Et",
           onPress: () => {
