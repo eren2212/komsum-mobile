@@ -349,7 +349,7 @@ export default function MySponsoredPostsScreen() {
     <SafeAreaView className="flex-1 bg-slate-50" edges={["top"]}>
       {/* ── Header ── */}
       <View className="flex-row items-center justify-between px-5 pt-3 pb-4">
-        <BackButton light={false} />
+        <BackButton />
 
         <Text className="text-[17px] font-bold text-[#32343E]">Gönderilerim</Text>
 

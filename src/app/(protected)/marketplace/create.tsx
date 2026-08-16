@@ -283,7 +283,7 @@ export default function MarketplaceCreateScreen() {
       />
       {/* ── Başlık ── */}
       <View className="flex-row items-center px-4 py-4 border-b border-[#F1F5F9]">
-        <BackButton light={false} />
+        <BackButton />
 
         <View className="flex-1 items-center">
           <Text className="text-[18px] font-bold text-neutral-900 tracking-[-0.45px]">

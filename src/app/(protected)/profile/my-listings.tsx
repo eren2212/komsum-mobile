@@ -280,7 +280,7 @@ export default function MyListingsScreen() {
 
       {/* ── Başlık ── */}
       <View className="flex-row items-center justify-between px-5 pt-3 pb-4">
-        <BackButton light={false} />
+        <BackButton />
 
         <Text className="text-[17px] font-bold text-[#32343E]">
           İlanlarım

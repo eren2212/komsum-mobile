@@ -14,3 +14,5 @@ export { EventCard, EventCardSkeleton, EventCardCompactSkeleton } from "./EventC
 
 export { default as LegalDocumentModal } from "./LegalDocumentModal";
 export type { LegalDocumentModalProps } from "./LegalDocumentModal";
+
+export { default as ErrorBoundary } from "./ErrorBoundary";

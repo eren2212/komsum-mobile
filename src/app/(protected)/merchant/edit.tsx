@@ -147,7 +147,7 @@ export default function MerchantEditScreen() {
     <SafeAreaView className="flex-1 bg-neutral-50">
       {/* ── Başlık ── */}
       <View className="flex-row items-center justify-between px-6 pt-4 pb-6">
-        <BackButton light={false} />
+        <BackButton />
 
         <Text className="text-neutral-700 text-[17px] font-bold">
           Bilgileri Düzenle

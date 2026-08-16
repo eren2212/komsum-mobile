@@ -21,7 +21,7 @@ export default function TabsLayout() {
                     title: 'Akış',
                     tabBarIcon: ({ color, focused }) => (
                         <Ionicons name={focused ? "home" : "home-outline"} color={color} size={24} />
-                    )
+                    ),
                 }}
             />
             <Tabs.Screen
