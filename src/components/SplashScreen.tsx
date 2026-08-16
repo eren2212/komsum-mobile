@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Text, View } from 'react-native';
-import Svg, { G, Path, Rect } from 'react-native-svg';
+import { Animated, Dimensions, View } from 'react-native';
+import { Image } from 'expo-image';
+import Svg, { G, Path } from 'react-native-svg';
 
 const { width } = Dimensions.get('window');
 
@@ -43,33 +44,33 @@ function FanDecoration({
   return <G>{paths}</G>;
 }
 
-// Logo: K + ev ikonu + MŞUM
-function KomsumLogo() {
-  return (
-    <View className="flex-row items-center">
-      <Text className="text-5xl font-extrabold text-[#191970] tracking-[1px]">K</Text>
-      {/* Ev ikonu — "O" yerine */}
-      <View className="mx-[2px] -mt-[2px]">
-        <Svg width={46} height={46} viewBox="0 0 46 46" fill="none">
-          {/* Çatı */}
-          <Path
-            d="M6 22L23 7L40 22"
-            stroke={ORANGE}
-            strokeWidth="3.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* Gövde */}
-          <Rect x="10" y="22" width="26" height="18" rx="2" fill="white" stroke={ORANGE} strokeWidth="2.5" />
-          {/* Kapı */}
-          <Rect x="18" y="29" width="10" height="11" rx="5" fill={ORANGE} opacity={0.25} />
-          <Rect x="18" y="29" width="10" height="11" rx="5" stroke={ORANGE} strokeWidth="2" fill="none" />
-        </Svg>
-      </View>
-      <Text className="text-5xl font-extrabold text-[#191970] tracking-[1px]">MŞUM</Text>
-    </View>
-  );
-}
+// Logo: K + ev ikonu + MŞUM (el yazması wordmark — yerini arayüz logosu aldı, bkz. render)
+// function KomsumLogo() {
+//   return (
+//     <View className="flex-row items-center">
+//       <Text className="text-5xl font-extrabold text-[#191970] tracking-[1px]">K</Text>
+//       {/* Ev ikonu — "O" yerine */}
+//       <View className="mx-[2px] -mt-[2px]">
+//         <Svg width={46} height={46} viewBox="0 0 46 46" fill="none">
+//           {/* Çatı */}
+//           <Path
+//             d="M6 22L23 7L40 22"
+//             stroke={ORANGE}
+//             strokeWidth="3.2"
+//             strokeLinecap="round"
+//             strokeLinejoin="round"
+//           />
+//           {/* Gövde */}
+//           <Rect x="10" y="22" width="26" height="18" rx="2" fill="white" stroke={ORANGE} strokeWidth="2.5" />
+//           {/* Kapı */}
+//           <Rect x="18" y="29" width="10" height="11" rx="5" fill={ORANGE} opacity={0.25} />
+//           <Rect x="18" y="29" width="10" height="11" rx="5" stroke={ORANGE} strokeWidth="2" fill="none" />
+//         </Svg>
+//       </View>
+//       <Text className="text-5xl font-extrabold text-[#191970] tracking-[1px]">MŞUM</Text>
+//     </View>
+//   );
+// }
 
 export default function SplashScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -117,15 +118,16 @@ export default function SplashScreen() {
         </Svg>
       </View>
 
-      {/* Logo */}
+      {/* Logo — arayüz logosu (transparan) */}
       <Animated.View
         className="items-center"
         style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}
       >
-        <KomsumLogo />
-        <Text className="mt-2.5 text-[11px] font-semibold text-[#8A8A96] tracking-[2.5px]">
-          MAHALLEMIZ BURADA
-        </Text>
+        <Image
+          source={require('../../assets/images/logo/transparan_arayuz_logo.png')}
+          style={{ width: width * 0.68, height: width * 0.68 }}
+          contentFit="contain"
+        />
       </Animated.View>
     </View>
   );

@@ -76,7 +76,4 @@ export const uploadApi = {
 
   /** POST /api/upload/event-image – Etkinlik kapak fotoğrafı yükle, public URL döner */
   uploadEventImage: (uri: string): Promise<string> => upload("/api/upload/event-image", uri),
-
-  /** POST /api/upload/roomio-photo – Roomio profil fotoğrafı yükle, public URL döner */
-  uploadRoomioPhoto: (uri: string): Promise<string> => upload("/api/upload/roomio-photo", uri),
 };

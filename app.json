@@ -5,11 +5,11 @@
     "scheme": "komsum",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/komsum-appikon-turuncu.png",
+    "icon": "./assets/images/logo/app_logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/logo/komsum-logo-turuncu.png",
+      "image": "./assets/images/logo/arayuz_logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -22,14 +22,12 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/komsum-appikon-turuncu-seffaf.png",
-        "backgroundColor": "#FF6B4A"
+        "foregroundImage": "./assets/images/logo/app_logo.png",
+        "backgroundColor": "#FFFFFF"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ],
+      "permissions": ["android.permission.RECORD_AUDIO"],
       "package": "com.eren1247.mobile",
       "googleServicesFile": "./google-services.json"
     },
@@ -59,7 +57,8 @@
           "color": "#FF6B4A",
           "defaultChannel": "default"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "router": {},

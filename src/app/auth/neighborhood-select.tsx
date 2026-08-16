@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -14,14 +15,18 @@ import { BackButton, CustomButton } from "@/components";
 import { useSignupStore } from "@/store/signupStore";
 import { useAuthStore } from "@/store/authStore";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
-import Logo from "../../../assets/images/logo/komsum-logo-turuncu.svg";
+import { Image } from "expo-image";
 
 // ─── Logo ────────────────────────────────────────────────────────────────────
 
 function KomsumLogo() {
   return (
-    <View className="justify-center items-center ml-auto mb-28">
-      <Logo width={330} height={80} />
+    <View className="justify-center items-center">
+      <Image
+        source={require("../../../assets/images/logo/transparan_arayuz_logo.png")}
+        style={{ width: 200, height: 200 }}
+        contentFit="contain"
+      />
     </View>
   );
 }
@@ -215,14 +220,19 @@ export default function NeighborhoodSelectScreen() {
       <View className="flex-1 px-6">
         {/* Geri butonu */}
         <View className="pt-4 pb-2">
-          <BackButton light={false} />
+          <BackButton />
         </View>
 
-        <View className="flex-1 items-center justify-center flex-col">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1, alignItems: "center", justifyContent: "center", paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <KomsumLogo />
 
           <Text
-            className="text-neutral-600 text-[22px] text-center mt-10"
+            className="text-neutral-600 text-[22px] text-center "
             style={{ fontFamily: "Sen_400Regular" }}
           >
             Neredesin Komşum{" "}
@@ -235,7 +245,7 @@ export default function NeighborhoodSelectScreen() {
           </Text>
 
           {/* ── 3 adımlı seçim ── */}
-          <View className="mt-10 w-full">
+          <View className="mt-6 w-full">
             {/* İl */}
             <SelectRow
               label="İl"
@@ -273,7 +283,7 @@ export default function NeighborhoodSelectScreen() {
               />
             </View>
           </View>
-        </View>
+        </ScrollView>
       </View>
 
       {/* ── İl Modalı ── */}
