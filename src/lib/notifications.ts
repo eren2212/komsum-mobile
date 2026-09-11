@@ -135,6 +135,9 @@ export function navigateFromNotification(
     case "EVENT":
       router.push(`/event/${id}` as never);
       break;
+    case "BADGE":
+      router.push("/profile/my-tasks" as never);
+      break;
     case "CHAT_ROOM":
       // roomId + gönderen bilgisi → sohbet header'ı dolu açılsın
       router.push({

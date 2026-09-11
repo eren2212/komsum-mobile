@@ -230,6 +230,10 @@ export default function EventDetailScreen() {
         };
       });
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["me", "tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["me", "points"] });
+    },
     onError: () => {
       queryClient.invalidateQueries({ queryKey: ["event", eventId] });
       queryClient.invalidateQueries({ queryKey: ["districtEvents"] });

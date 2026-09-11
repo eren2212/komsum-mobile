@@ -394,6 +394,8 @@ export default function PostDetailScreen() {
           return { ...old, pages };
         }
       );
+      queryClient.invalidateQueries({ queryKey: ["me", "tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["me", "points"] });
     },
   });
 

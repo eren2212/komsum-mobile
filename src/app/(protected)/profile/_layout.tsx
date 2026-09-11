@@ -8,6 +8,7 @@ export default function ProfileLayout() {
             <Stack.Screen name="my-posts" options={{ headerShown: false }} />
             <Stack.Screen name="my-listings" options={{ headerShown: false }} />
             <Stack.Screen name="my-events" options={{ headerShown: false }} />
+            <Stack.Screen name="my-tasks" options={{ headerShown: false }} />
         </Stack>
     );
 }

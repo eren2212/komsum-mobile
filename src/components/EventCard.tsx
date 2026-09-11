@@ -213,6 +213,10 @@ export function EventCard({ event, compact = false }: EventCardProps) {
         };
       });
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["me", "tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["me", "points"] });
+    },
     onError: () => queryClient.invalidateQueries({ queryKey: ["districtEvents"] }),
   });
 

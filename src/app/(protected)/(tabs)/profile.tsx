@@ -18,6 +18,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 
 import { userApi } from "@/api/user";
+import { taskApi } from "@/api/task";
 import { useAuthStore } from "@/store/authStore";
 import { colors } from "@/theme/color";
 import { SkeletonBox } from "@/components";
@@ -129,6 +130,11 @@ export default function ProfileScreen() {
   const { data: profile, isLoading, error } = useQuery({
     queryKey: ["me", "profile"],
     queryFn: userApi.getMyProfile,
+  });
+
+  const { data: pointsSummary } = useQuery({
+    queryKey: ["me", "points"],
+    queryFn: taskApi.getMyPointsSummary,
   });
 
   const handleDeleteAccount = () => {
@@ -244,6 +250,11 @@ export default function ProfileScreen() {
       label: "Etkinlikler",
       onPress: () => router.push("/profile/my-events"),
     },
+    {
+      icon: "ribbon-outline",
+      label: "Komşu Görevlerim",
+      onPress: () => router.push("/profile/my-tasks"),
+    },
 
     {
       icon: "log-out-outline",
@@ -305,6 +316,19 @@ export default function ProfileScreen() {
           </View>
 
           <Text className="text-white text-xl font-bold">{fullName}</Text>
+
+          {pointsSummary && (
+            <TouchableOpacity
+              onPress={() => router.push("/profile/my-tasks")}
+              activeOpacity={0.7}
+              className="flex-row items-center mt-2 px-3 py-1.5 rounded-full bg-white/15"
+            >
+              <Ionicons name="ribbon" size={14} color="#FFFFFF" />
+              <Text className="text-white text-[13px] font-medium ml-1.5">
+                {pointsSummary.totalPoints} puan · {pointsSummary.earnedBadgeCount} rozet
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 

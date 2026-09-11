@@ -195,6 +195,8 @@ export default function CreateScreen() {
     onSuccess: () => {
       // Mahalle akışını (ve new-count'u prefix eşleşmesiyle) tazele → kendi postun tepede belirir.
       queryClient.invalidateQueries({ queryKey: ["neighborhoodFeed"] });
+      queryClient.invalidateQueries({ queryKey: ["me", "tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["me", "points"] });
       setContent("");
       router.back();
     },
